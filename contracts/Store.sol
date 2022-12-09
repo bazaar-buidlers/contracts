@@ -14,9 +14,11 @@ contract Store is Ownable, ERC1155URIStorage, ERC2981 {
     using Counters for Counters.Counter;
 
     // config flag enables free mints
-    uint256 constant CONFIG_DONATIONS = 1;
+    uint256 constant CONFIG_FREE = 1 << 0;
     // config flag disables transfers
-    uint256 constant CONFIG_SOULBOUND = 2;
+    uint256 constant CONFIG_SOULBOUND = 1 << 1;
+    // config flag enforces one item per address
+    uint256 constant CONFIG_UNIQUE = 1 << 2;
 
     // protocol fee numerator
     uint96 constant FEE_NUMERATOR = 500;
@@ -80,7 +82,8 @@ contract Store is Ownable, ERC1155URIStorage, ERC2981 {
         uint256 price = _prices[id][erc20];
 
         require(item.supply < item.limit, "supply limit reached");
-        require(item.config & CONFIG_DONATIONS > 0 || price > 0, "invalid currency");
+        require(item.config & CONFIG_FREE != 0 || price > 0, "invalid currency");
+        require(item.config & CONFIG_UNIQUE == 0 || balanceOf(to, id) == 0, "item is unique");
 
         uint256 fee = (price * FEE_NUMERATOR) / FEE_DENOMINATOR;
         _deposit(owner(), erc20, fee);
@@ -115,7 +118,11 @@ contract Store is Ownable, ERC1155URIStorage, ERC2981 {
      * @dev Airdrop an item.
      */
     function airdrop(address to, uint256 id) external onlyVendor(id) {
-        require(_items[id].supply < _items[id].limit, "supply limit reached");
+        Item memory item = _items[id];
+        
+        require(item.supply < item.limit, "supply limit reached");
+        require(item.config & CONFIG_UNIQUE == 0 || balanceOf(to, id) == 0, "item is unique");
+        
         _mint(to, id, 1, "");
     }
 
