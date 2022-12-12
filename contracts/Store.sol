@@ -7,11 +7,9 @@ import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155URIStorage.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
-import "@openzeppelin/contracts/utils/Counters.sol";
 
 contract Store is Ownable, ERC1155URIStorage, ERC2981 {
     using Address for address payable;
-    using Counters for Counters.Counter;
 
     // config flag enables free mints
     uint256 constant CONFIG_FREE = 1 << 0;
@@ -19,11 +17,6 @@ contract Store is Ownable, ERC1155URIStorage, ERC2981 {
     uint256 constant CONFIG_SOULBOUND = 1 << 1;
     // config flag enforces one item per address
     uint256 constant CONFIG_UNIQUE = 1 << 2;
-
-    // protocol fee numerator
-    uint96 constant FEE_NUMERATOR = 500;
-    // protocol fee denominator
-    uint96 constant FEE_DENOMINATOR = 10000;
 
     // emitted when item vendor is changed
     event VendorChanged(uint256 id, address vendor);
@@ -38,8 +31,6 @@ contract Store is Ownable, ERC1155URIStorage, ERC2981 {
     // emitted when funds are withdrawn
     event Withdrawn(address payee, IERC20 erc20, uint256 amount);
 
-    // counter for token ids
-    Counters.Counter private _counter;
     // mapping of token ids to item settings
     mapping(uint256 => Item) private _items;
     // mapping of token ids to mapping of erc20 to prices
@@ -64,20 +55,28 @@ contract Store is Ownable, ERC1155URIStorage, ERC2981 {
     /**
      * @dev List an item.
      */
-    function list(string calldata tokenURI) external returns (uint256) {
-        uint256 id = _counter.current();
+    function list(
+        uint256 id,
+        uint256 limit,
+        uint256 config,
+        string calldata tokenURI
+    ) external {
+        require(_items[id].vendor == address(0), "id is taken");
         _setVendor(id, _msgSender());
         _setURI(id, tokenURI);
-        _setLimit(id, type(uint256).max);
-        _setTokenRoyalty(id, _msgSender(), 500);
-        _counter.increment();
-        return id;
+        _setLimit(id, limit);
+        _setConfig(id, config);
     }
 
     /**
      * @dev Mint an item.
      */
-    function mint(address to, uint256 id, IERC20 erc20) external payable {
+    function mint(
+        address to,
+        uint256 id,
+        IERC20 erc20,
+        address affiliate
+    ) external payable {
         Item memory item = _items[id];
         uint256 price = _prices[id][erc20];
 
@@ -85,9 +84,15 @@ contract Store is Ownable, ERC1155URIStorage, ERC2981 {
         require(item.config & CONFIG_FREE != 0 || price > 0, "invalid currency");
         require(item.config & CONFIG_UNIQUE == 0 || balanceOf(to, id) == 0, "item is unique");
 
-        uint256 fee = (price * FEE_NUMERATOR) / FEE_DENOMINATOR;
-        _deposit(owner(), erc20, fee);
-        _deposit(item.vendor, erc20, price - fee);
+        if (price > 0) {
+            uint256 feeHalf = (price * 250) / 10000;
+            // split fee between protocol and affiliate
+            _deposit(owner(), erc20, feeHalf);
+            _deposit(affiliate, erc20, feeHalf);
+            // remainder of sale price goes to vendor
+            _deposit(item.vendor, erc20, price - (feeHalf * 2));    
+        }
+
         _mint(to, id, 1, "");
 
         if (address(erc20) == address(0)) {
@@ -130,8 +135,7 @@ contract Store is Ownable, ERC1155URIStorage, ERC2981 {
      * @dev Set the config mask for an item.
      */
     function setConfig(uint256 id, uint256 config) external onlyVendor(id) {
-        _items[id].config = config;
-        emit ConfigChanged(id, config);
+        _setConfig(id, config);
     }
 
     /**
@@ -196,6 +200,11 @@ contract Store is Ownable, ERC1155URIStorage, ERC2981 {
     ////////////////
     /// Internal ///
     ////////////////
+
+    function _setConfig(uint256 id, uint256 config) internal {
+        _items[id].config = config;
+        emit ConfigChanged(id, config);
+    }
 
     function _setVendor(uint256 id, address vendor) internal {
         _items[id].vendor = vendor;
