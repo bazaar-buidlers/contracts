@@ -67,7 +67,7 @@ contract Bazaar is Ownable2Step, ERC1155URIStorage, ERC2981 {
         require(!item.isUnique() || balanceOf(to, id) == 0, "item is unique");
         require(item.supply < item.limit, "mint limit reached");
 
-        if (item.isFree()) {
+        if (item.isFree() || _msgSender() == item.vendor) {
             return _mint(to, id, 1, "");
         }
 
