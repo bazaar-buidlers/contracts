@@ -47,15 +47,17 @@ contract Bazaar is Ownable2Step, ERC1155URIStorage, ERC2981 {
 
     /// @dev List an item for sale.
     function list(uint256 limit, uint256 config, string calldata tokenURI) external returns (uint256) {
+        Items.Item memory item = Items.Item(_msgSender(), 0, limit, config);
+
         uint256 id = _counter.current();
-        _items[id] = Items.Item(_msgSender(), 0, limit, config);
-
-        emit VendorChanged(id, _msgSender());
-        emit LimitChanged(id, limit);
-        emit ConfigChanged(id, config);
-
+        _items[id] = item;
         _setURI(id, tokenURI);
         _counter.increment();
+
+        emit VendorChanged(id, item.vendor);
+        emit LimitChanged(id, item.limit);
+        emit ConfigChanged(id, item.config);
+
         return id;
     }
 
