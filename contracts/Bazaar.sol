@@ -11,6 +11,7 @@ import "@openzeppelin/contracts/utils/Counters.sol";
 
 import "./Items.sol";
 
+/// @title A digital bazaar
 contract Bazaar is Ownable2Step, ERC1155URIStorage, ERC2981 {
     using Address for address payable;
     using Counters for Counters.Counter;
@@ -43,7 +44,10 @@ contract Bazaar is Ownable2Step, ERC1155URIStorage, ERC2981 {
     // mapping of address to mapping of erc20 to deposits
     mapping(address => mapping(IERC20 => uint256)) private _deposits;
 
-    /// @dev Create a new Bazaar.
+    /// @dev Creates a new Bazaar.
+    ///
+    /// @param numerator protocol fee numerator
+    /// @param denominator protocol fee denominator
     constructor(uint96 numerator, uint96 denominator) ERC1155("") {
         require(numerator <= denominator, "invalid protocol fee");
         feeNumerator = numerator;
@@ -51,6 +55,12 @@ contract Bazaar is Ownable2Step, ERC1155URIStorage, ERC2981 {
     }
 
     /// @dev List an item for sale.
+    ///
+    /// @param limit maximum number of mints
+    /// @param config item configuration mask
+    /// @param tokenURI metadata storage location
+    ///
+    /// @return unique token id
     function list(uint256 limit, uint256 config, string calldata tokenURI) external returns (uint256) {
         Items.Item memory item = Items.Item(_msgSender(), 0, limit, config);
 
@@ -67,12 +77,16 @@ contract Bazaar is Ownable2Step, ERC1155URIStorage, ERC2981 {
     }
 
     /// @dev Mint an item.
+    ///
+    /// @param to recipient address
+    /// @param id unique token id
+    /// @param erc20 currency address
     function mint(address to, uint256 id, IERC20 erc20) external payable {
         Items.Item storage item = _items[id];
 
+        require(item.supply < item.limit, "mint limit reached");
         require(!item.isPaused(), "minting is paused");
         require(!item.isUnique() || balanceOf(to, id) == 0, "item is unique");
-        require(item.supply < item.limit, "mint limit reached");
 
         if (item.isFree() || _msgSender() == item.vendor) {
             return _mint(to, id, 1, "");
@@ -94,6 +108,9 @@ contract Bazaar is Ownable2Step, ERC1155URIStorage, ERC2981 {
     }
 
     /// @dev Withdraw deposits.
+    ///
+    /// @param payee address to withdraw to
+    /// @param erc20 currency address
     function withdraw(address payable payee, IERC20 erc20) external {
         uint256 amount = _deposits[_msgSender()][erc20];
         require(amount > 0, "nothing to withdraw");
@@ -108,46 +125,82 @@ contract Bazaar is Ownable2Step, ERC1155URIStorage, ERC2981 {
         }
     }
 
+    /// @dev Update pricing of an item.
+    ///
+    /// @param id unique token id
+    /// @param erc20s list of currencies
+    /// @param prices list of prices
+    function appraise(uint256 id, IERC20[] calldata erc20s, uint256[] calldata prices) external onlyVendor(id) {
+        require(erc20s.length == prices.length, "mismatched erc20 and price");
+
+        for (uint256 i = 0; i < erc20s.length; ++i) {
+            IERC20 erc20 = erc20s[i];
+            uint256 price = prices[i];
+
+            _prices[id][erc20] = price;
+            emit PriceChanged(id, erc20, price);
+        }
+    }
+
     /// @dev Set the config mask for an item.
+    ///
+    /// @param id unique token id
+    /// @param config configuration mask
     function setConfig(uint256 id, uint256 config) external onlyVendor(id) {
         _items[id].setConfig(config);
         emit ConfigChanged(id, config);
     }
 
-    /// @dev Set the limit for maximum number of mints of an item.
+    /// @dev Set the maximum number of mints of an item.
+    ///
+    /// @param id unique token id
+    /// @param limit maximum mint limit
     function setLimit(uint256 id, uint256 limit) external onlyVendor(id) {
         _items[id].setLimit(limit);
         emit LimitChanged(id, limit);
     }
 
     /// @dev Set the vendor address for an item.
+    ///
+    /// @param id unique token id
+    /// @param vendor new vendor address
     function setVendor(uint256 id, address vendor) external onlyVendor(id) {
         _items[id].setVendor(vendor);
         emit VendorChanged(id, vendor);
     }
 
-    /// @dev Set the mint price in the specified currency.
-    function setPrice(uint256 id, IERC20 erc20, uint256 price) external onlyVendor(id) {
-        _setPrice(id, erc20, price);
-        emit PriceChanged(id, erc20, price);
-    }
-
     /// @dev Set the URI for an item.
+    ///
+    /// @param id unique token id
+    /// @param tokenURI new metadata storage location
     function setURI(uint256 id, string calldata tokenURI) external onlyVendor(id) {
         _setURI(id, tokenURI);
     }
 
-    /// @dev Set the royalty receiver and basis points for an item.
+    /// @dev Set the royalty receiver and fee for an item.
+    ///
+    /// @param id unique token id
+    /// @param receiver address of royalty recipient
+    /// @param fee numerator of royalty fee
     function setRoyalty(uint256 id, address receiver, uint96 fee) external onlyVendor(id) {
         _setTokenRoyalty(id, receiver, fee);
     }
 
     /// @dev Returns the price of an item in the specified currency.
+    ///
+    /// @param id unique token id
+    /// @param erc20 currency address
+    ///
+    /// @return price of the item in the specified currency
     function priceInfo(uint256 id, IERC20 erc20) external view returns (uint256) {
         return _prices[id][erc20];
     }
 
     /// @dev Returns info about the specified item.
+    ///
+    /// @param id unique token id
+    ///
+    /// @return item config, limit, supply, and vendor
     function itemInfo(uint256 id) external view returns (Items.Item memory) {
         return _items[id];
     }
@@ -164,11 +217,6 @@ contract Bazaar is Ownable2Step, ERC1155URIStorage, ERC2981 {
     ////////////////
     /// Internal ///
     ////////////////
-
-    function _setPrice(uint256 id, IERC20 erc20, uint256 price) internal {
-        _prices[id][erc20] = price;
-        emit PriceChanged(id, erc20, price);
-    }
 
     function _deposit(address payee, IERC20 erc20, uint256 amount) internal {
         _deposits[payee][erc20] += amount;
