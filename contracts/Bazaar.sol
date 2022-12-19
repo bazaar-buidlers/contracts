@@ -16,11 +16,6 @@ contract Bazaar is Ownable2Step, ERC1155URIStorage, ERC2981 {
     using Counters for Counters.Counter;
     using Items for Items.Item;
 
-    // protocol fee basis points numerator
-    uint96 constant FEE_NUMERATOR = 250;
-    // protocol fee basis points denominator
-    uint96 constant FEE_DENOMINATOR = 10000;
-
     // emitted when item vendor is changed
     event VendorChanged(uint256 id, address vendor);
     // emitted when item limit is changed
@@ -34,6 +29,11 @@ contract Bazaar is Ownable2Step, ERC1155URIStorage, ERC2981 {
     // emitted when funds are withdrawn
     event Withdrawn(address payee, IERC20 erc20, uint256 amount);
 
+    // protocol fee basis points numerator
+    uint96 public immutable feeNumerator;
+    // protocol fee basis points denominator
+    uint96 public immutable feeDenominator;
+
     // token id counter
     Counters.Counter private _counter;
     // mapping of token ids to item settings
@@ -43,7 +43,12 @@ contract Bazaar is Ownable2Step, ERC1155URIStorage, ERC2981 {
     // mapping of address to mapping of erc20 to deposits
     mapping(address => mapping(IERC20 => uint256)) private _deposits;
 
-    constructor() ERC1155("") {}
+    /// @dev Create a new Bazaar.
+    constructor(uint96 numerator, uint96 denominator) ERC1155("") {
+        require(numerator <= denominator, "invalid protocol fee");
+        feeNumerator = numerator;
+        feeDenominator = denominator;
+    }
 
     /// @dev List an item for sale.
     function list(uint256 limit, uint256 config, string calldata tokenURI) external returns (uint256) {
@@ -76,7 +81,7 @@ contract Bazaar is Ownable2Step, ERC1155URIStorage, ERC2981 {
         uint256 price = _prices[id][erc20];
         require(price > 0, "invalid currency");
 
-        uint256 fee = (price * FEE_NUMERATOR) / FEE_DENOMINATOR;
+        uint256 fee = (price * feeNumerator) / feeDenominator;
         _deposit(item.vendor, erc20, price - fee);
         _deposit(owner(), erc20, fee);
         _mint(to, id, 1, "");
