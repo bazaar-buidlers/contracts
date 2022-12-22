@@ -84,9 +84,7 @@ contract Bazaar is Ownable2Step, ERC1155, ERC2981 {
     /// @param erc20 currency address
     function mint(address to, uint256 id, IERC20 erc20) external payable {
         Items.Item storage item = _items[id];
-
         require(!item.isPaused(), "minting is paused");
-        require(!item.isUnique() || balanceOf(to, id) == 0, "item is unique");
 
         if (item.isFree() || _msgSender() == item.vendor) {
             return _mint(to, id, 1, "");
@@ -256,16 +254,16 @@ contract Bazaar is Ownable2Step, ERC1155, ERC2981 {
     ) internal override(ERC1155) {
         super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
 
-        if (from == address(0)) {
-            // update supply when minting
-            for (uint256 i = 0; i < ids.length; ++i) {
-                Items.Item storage item = _items[ids[i]];
-                item.addSupply(amounts[i]);
-            }
-        } else {
-            // check if soulbound when transferring
-            for (uint256 i = 0; i < ids.length; ++i) {
-                Items.Item storage item = _items[ids[i]];
+        for (uint256 i = 0; i < ids.length; ++i) {
+            uint256 id = ids[i];
+            uint256 amount = amounts[i];
+
+            Items.Item storage item = _items[id];
+            require(!item.isUnique() || balanceOf(to, id) + amount == 1, "item is unique");
+
+            if (from == address(0)) {
+                item.addSupply(amount);
+            } else {
                 require(!item.isSoulbound(), "item is soulbound");
             }
         }

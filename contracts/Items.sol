@@ -21,7 +21,7 @@ library Items {
         uint256 limit;
         // config mask
         uint256 config;
-        // item token uri
+        // token uri
         string uri;
     }
 
