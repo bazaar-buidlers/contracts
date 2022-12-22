@@ -204,6 +204,15 @@ contract Bazaar is Ownable2Step, ERC1155URIStorage, ERC2981 {
         return _items[id];
     }
 
+    /// @dev Returns the total supply of the specified item.
+    ///
+    /// @param id unique token id
+    ///
+    /// @return total number of minted items
+    function totalSupply(uint256 id) external view returns (uint256) {
+        return _items[id].supply;
+    }
+
     /////////////////
     /// Modifiers ///
     /////////////////
