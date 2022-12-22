@@ -11,7 +11,7 @@ import "@openzeppelin/contracts/utils/Counters.sol";
 
 import "./Items.sol";
 
-/// @title A digital bazaar
+/// @title The digital bazaar
 contract Bazaar is Ownable2Step, ERC1155URIStorage, ERC2981 {
     using Address for address payable;
     using Counters for Counters.Counter;
@@ -84,7 +84,6 @@ contract Bazaar is Ownable2Step, ERC1155URIStorage, ERC2981 {
     function mint(address to, uint256 id, IERC20 erc20) external payable {
         Items.Item storage item = _items[id];
 
-        require(item.supply < item.limit, "mint limit reached");
         require(!item.isPaused(), "minting is paused");
         require(!item.isUnique() || balanceOf(to, id) == 0, "item is unique");
 
@@ -242,10 +241,10 @@ contract Bazaar is Ownable2Step, ERC1155URIStorage, ERC2981 {
         super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
 
         if (from == address(0)) {
-            // update supplies when minting
+            // update supply when minting
             for (uint256 i = 0; i < ids.length; ++i) {
                 Items.Item storage item = _items[ids[i]];
-                unchecked { item.supply += amounts[i]; }
+                item.addSupply(amounts[i]);
             }
         } else {
             // check if soulbound when transferring

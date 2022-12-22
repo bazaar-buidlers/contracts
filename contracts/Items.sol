@@ -37,6 +37,11 @@ library Items {
         item.limit = limit;
     }
 
+    function addSupply(Item storage item, uint256 amount) internal {
+        require(item.supply + amount <= item.limit, "limit reached");
+        item.supply += amount;
+    }
+
     function isPaused(Item storage item) internal view returns (bool) {
         return item.config & CONFIG_PAUSED != 0;
     }
