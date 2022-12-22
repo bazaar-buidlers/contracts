@@ -4,7 +4,6 @@ pragma solidity ^0.8.9;
 import "@openzeppelin/contracts/access/Ownable2Step.sol";
 import "@openzeppelin/contracts/token/common/ERC2981.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
-import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155URIStorage.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
@@ -12,7 +11,7 @@ import "@openzeppelin/contracts/utils/Counters.sol";
 import "./Items.sol";
 
 /// @title The digital bazaar
-contract Bazaar is Ownable2Step, ERC1155URIStorage, ERC2981 {
+contract Bazaar is Ownable2Step, ERC1155, ERC2981 {
     using Address for address payable;
     using Counters for Counters.Counter;
     using Items for Items.Item;
@@ -23,6 +22,8 @@ contract Bazaar is Ownable2Step, ERC1155URIStorage, ERC2981 {
     event LimitChanged(uint256 id, uint256 limit);
     // emitted when item config is changed
     event ConfigChanged(uint256 id, uint256 config);
+    // emitted when token URI is changed
+    event URIChanged(uint256 id, string uri);
     // emitted when item price is changed
     event PriceChanged(uint256 id, IERC20 erc20, uint256 price);
     // emitted when funds are deposited
@@ -62,16 +63,16 @@ contract Bazaar is Ownable2Step, ERC1155URIStorage, ERC2981 {
     ///
     /// @return unique token id
     function list(uint256 limit, uint256 config, string calldata tokenURI) external returns (uint256) {
-        Items.Item memory item = Items.Item(_msgSender(), 0, limit, config);
+        Items.Item memory item = Items.Item(_msgSender(), 0, limit, config, tokenURI);
 
         uint256 id = _counter.current();
         _items[id] = item;
-        _setURI(id, tokenURI);
         _counter.increment();
 
         emit VendorChanged(id, item.vendor);
         emit LimitChanged(id, item.limit);
         emit ConfigChanged(id, item.config);
+        emit URIChanged(id, item.uri);
 
         return id;
     }
@@ -133,11 +134,7 @@ contract Bazaar is Ownable2Step, ERC1155URIStorage, ERC2981 {
         require(erc20s.length == prices.length, "mismatched erc20 and price");
 
         for (uint256 i = 0; i < erc20s.length; ++i) {
-            IERC20 erc20 = erc20s[i];
-            uint256 price = prices[i];
-
-            _prices[id][erc20] = price;
-            emit PriceChanged(id, erc20, price);
+            _appraise(id, erc20s[i], prices[i]);
         }
     }
 
@@ -148,6 +145,15 @@ contract Bazaar is Ownable2Step, ERC1155URIStorage, ERC2981 {
     function setConfig(uint256 id, uint256 config) external onlyVendor(id) {
         _items[id].setConfig(config);
         emit ConfigChanged(id, config);
+    }
+
+    /// @dev Set the token URI for an item.
+    ///
+    /// @param id unique token id
+    /// @param tokenURI token URI
+    function setURI(uint256 id, string calldata tokenURI) external onlyVendor(id) {
+        _items[id].setURI(tokenURI);
+        emit URIChanged(id, tokenURI);
     }
 
     /// @dev Set the maximum number of mints of an item.
@@ -166,14 +172,6 @@ contract Bazaar is Ownable2Step, ERC1155URIStorage, ERC2981 {
     function setVendor(uint256 id, address vendor) external onlyVendor(id) {
         _items[id].setVendor(vendor);
         emit VendorChanged(id, vendor);
-    }
-
-    /// @dev Set the URI for an item.
-    ///
-    /// @param id unique token id
-    /// @param tokenURI new metadata storage location
-    function setURI(uint256 id, string calldata tokenURI) external onlyVendor(id) {
-        _setURI(id, tokenURI);
     }
 
     /// @dev Set the royalty receiver and fee for an item.
@@ -226,6 +224,11 @@ contract Bazaar is Ownable2Step, ERC1155URIStorage, ERC2981 {
     /// Internal ///
     ////////////////
 
+    function _appraise(uint256 id, IERC20 erc20, uint256 price) internal {
+        _prices[id][erc20] = price;
+        emit PriceChanged(id, erc20, price);
+    }
+
     function _deposit(address payee, IERC20 erc20, uint256 amount) internal {
         _deposits[payee][erc20] += amount;
         emit Deposited(payee, erc20, amount);
@@ -234,6 +237,10 @@ contract Bazaar is Ownable2Step, ERC1155URIStorage, ERC2981 {
     /////////////////
     /// Overrides ///
     /////////////////
+
+    function uri(uint256 id) public view override returns (string memory) {
+        return _items[id].uri;
+    }
 
     function supportsInterface(bytes4 interfaceId) public view override(ERC1155, ERC2981) returns (bool) {
         return super.supportsInterface(interfaceId);

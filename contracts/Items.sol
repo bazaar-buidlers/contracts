@@ -21,10 +21,16 @@ library Items {
         uint256 limit;
         // config mask
         uint256 config;
+        // item token uri
+        string uri;
     }
 
     function setConfig(Item storage item, uint256 config) internal {
         item.config = config;
+    }
+
+    function setURI(Item storage item, string memory uri) internal {
+        item.uri = uri;
     }
 
     function setVendor(Item storage item, address vendor) internal {
