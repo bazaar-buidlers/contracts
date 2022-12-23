@@ -17,15 +17,15 @@ contract Bazaar is Ownable2Step, ERC1155, ERC2981 {
     using Items for Items.Item;
 
     // emitted when item vendor is changed
-    event VendorChanged(uint256 id, address vendor);
+    event Vendor(uint256 id, address vendor);
     // emitted when item limit is changed
-    event LimitChanged(uint256 id, uint256 limit);
+    event Limit(uint256 id, uint256 limit);
     // emitted when item config is changed
-    event ConfigChanged(uint256 id, uint256 config);
+    event Config(uint256 id, uint256 config);
     // emitted when token URI is changed
-    event URIChanged(uint256 id, string uri);
+    event URI(uint256 id, string uri);
     // emitted when item price is changed
-    event PriceChanged(uint256 id, IERC20 erc20, uint256 price);
+    event Price(uint256 id, IERC20 erc20, uint256 price);
     // emitted when funds are deposited
     event Deposited(address payee, IERC20 erc20, uint256 amount);
     // emitted when funds are withdrawn
@@ -69,10 +69,10 @@ contract Bazaar is Ownable2Step, ERC1155, ERC2981 {
         _items[id] = item;
         _counter.increment();
 
-        emit VendorChanged(id, item.vendor);
-        emit LimitChanged(id, item.limit);
-        emit ConfigChanged(id, item.config);
-        emit URIChanged(id, item.uri);
+        emit Vendor(id, item.vendor);
+        emit Limit(id, item.limit);
+        emit Config(id, item.config);
+        emit URI(id, item.uri);
 
         return id;
     }
@@ -142,7 +142,7 @@ contract Bazaar is Ownable2Step, ERC1155, ERC2981 {
     /// @param config configuration mask
     function setConfig(uint256 id, uint256 config) external onlyVendor(id) {
         _items[id].setConfig(config);
-        emit ConfigChanged(id, config);
+        emit Config(id, config);
     }
 
     /// @dev Set the token URI for an item.
@@ -151,7 +151,7 @@ contract Bazaar is Ownable2Step, ERC1155, ERC2981 {
     /// @param tokenURI token URI
     function setURI(uint256 id, string calldata tokenURI) external onlyVendor(id) {
         _items[id].setURI(tokenURI);
-        emit URIChanged(id, tokenURI);
+        emit URI(id, tokenURI);
     }
 
     /// @dev Set the maximum number of mints of an item.
@@ -160,7 +160,7 @@ contract Bazaar is Ownable2Step, ERC1155, ERC2981 {
     /// @param limit maximum mint limit
     function setLimit(uint256 id, uint256 limit) external onlyVendor(id) {
         _items[id].setLimit(limit);
-        emit LimitChanged(id, limit);
+        emit Limit(id, limit);
     }
 
     /// @dev Set the vendor address for an item.
@@ -169,7 +169,7 @@ contract Bazaar is Ownable2Step, ERC1155, ERC2981 {
     /// @param vendor new vendor address
     function setVendor(uint256 id, address vendor) external onlyVendor(id) {
         _items[id].setVendor(vendor);
-        emit VendorChanged(id, vendor);
+        emit Vendor(id, vendor);
     }
 
     /// @dev Set the royalty receiver and fee for an item.
@@ -224,7 +224,7 @@ contract Bazaar is Ownable2Step, ERC1155, ERC2981 {
 
     function _appraise(uint256 id, IERC20 erc20, uint256 price) internal {
         _prices[id][erc20] = price;
-        emit PriceChanged(id, erc20, price);
+        emit Price(id, erc20, price);
     }
 
     function _deposit(address payee, IERC20 erc20, uint256 amount) internal {
