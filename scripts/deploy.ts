@@ -3,6 +3,7 @@ import { ethers } from "hardhat";
 async function main() {
   const Bazaar = await ethers.getContractFactory("Bazaar");
   const bazaar = await Bazaar.deploy();
+  
   await bazaar.deployed();
   console.log(`Bazaar deployed to ${bazaar.address}`);
 }

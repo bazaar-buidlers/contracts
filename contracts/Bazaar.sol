@@ -22,8 +22,6 @@ contract Bazaar is Ownable2Step, ERC1155, ERC2981 {
     event Limit(uint256 id, uint256 limit);
     // emitted when item config is changed
     event Config(uint256 id, uint256 config);
-    // emitted when token URI is changed
-    event URI(uint256 id, string uri);
     // emitted when item price is changed
     event Price(uint256 id, IERC20 erc20, uint256 price);
     // emitted when funds are deposited
@@ -72,7 +70,7 @@ contract Bazaar is Ownable2Step, ERC1155, ERC2981 {
         emit Vendor(id, item.vendor);
         emit Limit(id, item.limit);
         emit Config(id, item.config);
-        emit URI(id, item.uri);
+        emit URI(item.uri, id);
 
         return id;
     }
@@ -151,7 +149,7 @@ contract Bazaar is Ownable2Step, ERC1155, ERC2981 {
     /// @param tokenURI token URI
     function setURI(uint256 id, string calldata tokenURI) external onlyVendor(id) {
         _items[id].setURI(tokenURI);
-        emit URI(id, tokenURI);
+        emit URI(tokenURI, id);
     }
 
     /// @dev Set the maximum number of mints of an item.

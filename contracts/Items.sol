@@ -25,12 +25,9 @@ library Items {
         string uri;
     }
 
-    function setConfig(Item storage item, uint256 config) internal {
-        item.config = config;
-    }
-
-    function setURI(Item storage item, string memory uri) internal {
-        item.uri = uri;
+    function addSupply(Item storage item, uint256 amount) internal {
+        require(item.supply + amount <= item.limit, "limit reached");
+        item.supply += amount;
     }
 
     function setVendor(Item storage item, address vendor) internal {
@@ -43,9 +40,12 @@ library Items {
         item.limit = limit;
     }
 
-    function addSupply(Item storage item, uint256 amount) internal {
-        require(item.supply + amount <= item.limit, "limit reached");
-        item.supply += amount;
+    function setConfig(Item storage item, uint256 config) internal {
+        item.config = config;
+    }
+
+    function setURI(Item storage item, string memory uri) internal {
+        item.uri = uri;
     }
 
     function isPaused(Item storage item) internal view returns (bool) {
