@@ -17,13 +17,13 @@ contract Bazaar is Ownable2Step, ERC1155, ERC2981 {
     using Items for Items.Item;
 
     // emitted when item vendor is changed
-    event Vendor(uint256 id, address vendor);
+    event Vendor(address vendor, uint256 indexed id);
     // emitted when item limit is changed
-    event Limit(uint256 id, uint256 limit);
+    event Limit(uint256 limit, uint256 indexed id);
     // emitted when item config is changed
-    event Config(uint256 id, uint256 config);
+    event Config(uint256 config, uint256 indexed id);
     // emitted when item price is changed
-    event Price(uint256 id, IERC20 erc20, uint256 price);
+    event Price(uint256 price, IERC20 erc20, uint256 indexed id);
     // emitted when funds are deposited
     event Deposited(address payee, IERC20 erc20, uint256 amount);
     // emitted when funds are withdrawn
@@ -67,9 +67,9 @@ contract Bazaar is Ownable2Step, ERC1155, ERC2981 {
         _items[id] = item;
         _counter.increment();
 
-        emit Vendor(id, item.vendor);
-        emit Limit(id, item.limit);
-        emit Config(id, item.config);
+        emit Vendor(item.vendor, id);
+        emit Limit(item.limit, id);
+        emit Config(item.config, id);
         emit URI(item.uri, id);
 
         return id;
@@ -79,22 +79,23 @@ contract Bazaar is Ownable2Step, ERC1155, ERC2981 {
     ///
     /// @param to recipient address
     /// @param id unique token id
+    /// @param amount quantity to mint
     /// @param erc20 currency address
-    function mint(address to, uint256 id, IERC20 erc20) external payable {
+    function mint(address to, uint256 id, uint256 amount, IERC20 erc20) external payable {
         Items.Item storage item = _items[id];
         require(!item.isPaused(), "minting is paused");
 
         if (item.isFree() || _msgSender() == item.vendor) {
-            return _mint(to, id, 1, "");
+            return _mint(to, id, amount, "");
         }
 
-        uint256 price = _prices[id][erc20];
-        require(price > 0, "invalid currency");
+        uint256 price = _prices[id][erc20] * amount;
+        require(price > 0, "invalid currency or amount");
 
         uint256 fee = (price * feeNumerator) / feeDenominator;
         _deposit(item.vendor, erc20, price - fee);
         _deposit(owner(), erc20, fee);
-        _mint(to, id, 1, "");
+        _mint(to, id, amount, "");
 
         if (address(erc20) == address(0)) {
             require(msg.value >= price, "value too low");
@@ -140,7 +141,7 @@ contract Bazaar is Ownable2Step, ERC1155, ERC2981 {
     /// @param config configuration mask
     function setConfig(uint256 id, uint256 config) external onlyVendor(id) {
         _items[id].setConfig(config);
-        emit Config(id, config);
+        emit Config(config, id);
     }
 
     /// @dev Set the token URI for an item.
@@ -158,7 +159,7 @@ contract Bazaar is Ownable2Step, ERC1155, ERC2981 {
     /// @param limit maximum mint limit
     function setLimit(uint256 id, uint256 limit) external onlyVendor(id) {
         _items[id].setLimit(limit);
-        emit Limit(id, limit);
+        emit Limit(limit, id);
     }
 
     /// @dev Set the vendor address for an item.
@@ -167,7 +168,7 @@ contract Bazaar is Ownable2Step, ERC1155, ERC2981 {
     /// @param vendor new vendor address
     function setVendor(uint256 id, address vendor) external onlyVendor(id) {
         _items[id].setVendor(vendor);
-        emit Vendor(id, vendor);
+        emit Vendor(vendor, id);
     }
 
     /// @dev Set the royalty receiver and fee for an item.
@@ -222,7 +223,7 @@ contract Bazaar is Ownable2Step, ERC1155, ERC2981 {
 
     function _appraise(uint256 id, IERC20 erc20, uint256 price) internal {
         _prices[id][erc20] = price;
-        emit Price(id, erc20, price);
+        emit Price(price, erc20, id);
     }
 
     function _deposit(address payee, IERC20 erc20, uint256 amount) internal {
