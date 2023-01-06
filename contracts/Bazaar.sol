@@ -261,7 +261,7 @@ contract Bazaar is Ownable2Step, ERC1155, ERC2981 {
             require(!item.isUnique() || balanceOf(to, id) + amount == 1, "item is unique");
 
             if (from == address(0)) {
-                item.addSupply(amount);
+                item.setSupply(item.supply + amount);
             } else {
                 require(!item.isSoulbound(), "item is soulbound");
             }

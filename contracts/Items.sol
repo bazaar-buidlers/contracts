@@ -25,11 +25,6 @@ library Items {
         string uri;
     }
 
-    function addSupply(Item storage item, uint256 amount) internal {
-        require(item.supply + amount <= item.limit, "limit reached");
-        item.supply += amount;
-    }
-
     function setVendor(Item storage item, address vendor) internal {
         require(vendor != address(0), "invalid vendor address");
         item.vendor = vendor;
@@ -38,6 +33,11 @@ library Items {
     function setLimit(Item storage item, uint256 limit) internal {
         require(limit >= item.supply, "limit too low");
         item.limit = limit;
+    }
+
+    function setSupply(Item storage item, uint256 supply) internal {
+        require(supply <= item.limit, "limit reached");
+        item.supply = supply;
     }
 
     function setConfig(Item storage item, uint256 config) internal {
