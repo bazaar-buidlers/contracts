@@ -17,6 +17,16 @@ contract Bazaar is Ownable2Step, ERC1155, IERC2981 {
     // emitted when item price is changed
     event Appraise(uint256 price, IERC20 erc20, uint256 indexed id);
 
+    // mint fee basis points
+    uint96 public immutable feeNumerator;
+    // mint fee / royalty denominator
+    uint96 public constant feeDenominator = 10000;
+
+    // catalog contract
+    Catalog public catalog;
+    // escrow contract
+    Escrow public escrow;
+
     struct Listing {
         // total number of mints
         uint256 supply;
@@ -27,28 +37,20 @@ contract Bazaar is Ownable2Step, ERC1155, IERC2981 {
         // mapping of erc20 to price
         mapping(IERC20 => uint256) prices;
     }
-
-    // mint fee basis points
-    uint96 public immutable feeNumerator;
-    // mint fee / royalty denominator
-    uint96 constant feeDenominator = 10000;
-    // catalog of items
-    Catalog private _catalog;
-    // escrow contract
-    Escrow private _escrow;
+    
     // mapping of token id to listing
     mapping(uint256 => Listing) private _listings;
 
     /// @dev Create a new Bazaar.
     ///
-    /// @param catalog address of item catalog
-    /// @param fee mint fee in basis points
-    constructor(Catalog catalog, uint96 fee) ERC1155("") {
-        require(fee <= feeDenominator, "invalid protocol fee");
-        feeNumerator = fee;
+    /// @param _catalog address of item catalog
+    /// @param _feeNumerator mint fee in basis points
+    constructor(Catalog _catalog, uint96 _feeNumerator) ERC1155("") {
+        require(_feeNumerator <= feeDenominator, "invalid protocol fee");
+        feeNumerator = _feeNumerator;
 
-        _catalog = catalog;
-        _escrow = new Escrow();
+        catalog = _catalog;
+        escrow = new Escrow();
     }
 
     /// @dev Mint an item.
@@ -58,7 +60,7 @@ contract Bazaar is Ownable2Step, ERC1155, IERC2981 {
     /// @param amount quantity to mint
     /// @param erc20 currency address
     function mint(address to, uint256 id, uint256 amount, IERC20 erc20) external payable {
-        Items.Item memory item = _catalog.itemInfo(id);
+        Items.Item memory item = catalog.itemInfo(id);
         require(!item.isPaused(), "minting is paused");
 
         if (item.isFree() || _msgSender() == item.vendor) {
@@ -72,8 +74,8 @@ contract Bazaar is Ownable2Step, ERC1155, IERC2981 {
 
         // deposit fee to owner and remainder to vendor
         uint256 fee = (amount * feeNumerator) / feeDenominator;
-        _escrow.deposit(item.vendor, erc20, price - fee);
-        _escrow.deposit(owner(), erc20, fee);
+        escrow.deposit(item.vendor, erc20, price - fee);
+        escrow.deposit(owner(), erc20, fee);
     }
 
     /// @dev Update pricing of an item.
@@ -91,14 +93,6 @@ contract Bazaar is Ownable2Step, ERC1155, IERC2981 {
             _listings[id].prices[erc20] = price;
             emit Appraise(price, erc20, id);
         }
-    }
-
-    /// @dev Withdraw deposits.
-    ///
-    /// @param payee address to send funds
-    /// @param erc20 currency address
-    function withdraw(address payable payee, IERC20 erc20) external {
-        _escrow.withdraw(_msgSender(), payee, erc20);
     }
 
     /// @dev Set the royalty fee for an item.
@@ -119,6 +113,14 @@ contract Bazaar is Ownable2Step, ERC1155, IERC2981 {
         _listings[id].limit = limit;
     }
 
+    /// @dev Withdraw deposits.
+    ///
+    /// @param payee address to send funds
+    /// @param erc20 currency address
+    function withdraw(address payable payee, IERC20 erc20) external {
+        escrow.withdraw(_msgSender(), payee, erc20);
+    }
+
     /// @dev Returns royalty info for an item.
     ///
     /// @param id unique token id
@@ -127,7 +129,7 @@ contract Bazaar is Ownable2Step, ERC1155, IERC2981 {
     /// @return recipient address and royalty amount
     function royaltyInfo(uint256 id, uint256 price) external view returns (address, uint256) {
         uint256 amount = (price * _listings[id].royalty) / feeDenominator;
-        return (_catalog.itemInfo(id).vendor, amount);
+        return (catalog.itemInfo(id).vendor, amount);
     }
 
     /// @dev Returns the price of an item in the specified currency.
@@ -160,7 +162,7 @@ contract Bazaar is Ownable2Step, ERC1155, IERC2981 {
 
     // modifier to check if sender is vendor
     modifier onlyVendor(uint256 id) {
-        require(_catalog.itemInfo(id).vendor == _msgSender(), "sender is not vendor");
+        require(catalog.itemInfo(id).vendor == _msgSender(), "sender is not vendor");
         _;
     }
 
@@ -169,7 +171,7 @@ contract Bazaar is Ownable2Step, ERC1155, IERC2981 {
     /////////////////
 
     function uri(uint256 id) public view override returns (string memory) {
-        return _catalog.itemInfo(id).uri;
+        return catalog.itemInfo(id).uri;
     }
 
     function supportsInterface(bytes4 interfaceId) public view override(ERC1155, IERC165) returns (bool) {
@@ -190,7 +192,7 @@ contract Bazaar is Ownable2Step, ERC1155, IERC2981 {
             uint256 id = ids[i];
             uint256 amount = amounts[i];
 
-            Items.Item memory item = _catalog.itemInfo(id);
+            Items.Item memory item = catalog.itemInfo(id);
             require(!item.isUnique() || balanceOf(to, id) + amount == 1, "item is unique");
             require(from == address(0) || !item.isSoulbound(), "item is soulbound");
 

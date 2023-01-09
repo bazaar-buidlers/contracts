@@ -12,3 +12,13 @@ export async function deployEscrow() {
 
   return { escrow, testToken };
 }
+
+export async function deployCatalog() {
+  const [deployer] = await ethers.getSigners();
+  const owner = await deployer.getAddress();
+
+  const Catalog = await ethers.getContractFactory('Catalog');
+  const catalog = await Catalog.deploy();
+
+  return { catalog };
+}
