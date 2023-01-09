@@ -11,31 +11,33 @@ import "./Catalog.sol";
 import "./Escrow.sol";
 import "./Items.sol";
 
-/// @title The digital bazaar
 contract Bazaar is Ownable2Step, ERC1155, IERC2981 {
     using Items for Items.Item;
 
     // emitted when item price is changed
     event Appraise(uint256 price, IERC20 erc20, uint256 indexed id);
 
+    struct Listing {
+        // total number of mints
+        uint256 supply;
+        // maximum supply limit
+        uint256 limit;
+        // royalty fee basis points
+        uint96 royalty;
+        // mapping of erc20 to price
+        mapping(IERC20 => uint256) prices;
+    }
+
     // mint fee basis points
     uint96 public immutable feeNumerator;
     // mint fee / royalty denominator
     uint96 constant feeDenominator = 10000;
-
     // catalog of items
     Catalog private _catalog;
     // escrow contract
     Escrow private _escrow;
-
-    // mapping of token ids to mapping of erc20 to prices
-    mapping(uint256 => mapping(IERC20 => uint256)) private _prices;
-    // mapping of token ids to supply
-    mapping(uint256 => uint256) private _supplies;
-    // mapping of token ids to limit
-    mapping(uint256 => uint256) private _limits;
-    // mapping of token ids to royalty
-    mapping(uint256 => uint96) private _royalties;
+    // mapping of token id to listing
+    mapping(uint256 => Listing) private _listings;
 
     /// @dev Create a new Bazaar.
     ///
@@ -44,6 +46,7 @@ contract Bazaar is Ownable2Step, ERC1155, IERC2981 {
     constructor(Catalog catalog, uint96 fee) ERC1155("") {
         require(fee <= feeDenominator, "invalid protocol fee");
         feeNumerator = fee;
+
         _catalog = catalog;
         _escrow = new Escrow();
     }
@@ -62,7 +65,7 @@ contract Bazaar is Ownable2Step, ERC1155, IERC2981 {
             return _mint(to, id, amount, "");
         }
 
-        uint256 price = _prices[id][erc20] * amount;
+        uint256 price = _listings[id].prices[erc20] * amount;
         require(price > 0, "invalid currency or amount");
 
         _mint(to, id, amount, "");
@@ -85,7 +88,7 @@ contract Bazaar is Ownable2Step, ERC1155, IERC2981 {
             IERC20 erc20 = erc20s[i];
             uint256 price = prices[i];
 
-            _prices[id][erc20] = price;
+            _listings[id].prices[erc20] = price;
             emit Appraise(price, erc20, id);
         }
     }
@@ -103,16 +106,16 @@ contract Bazaar is Ownable2Step, ERC1155, IERC2981 {
     /// @param id unique token id
     /// @param fee numerator of royalty fee
     function setRoyalty(uint256 id, uint96 fee) external onlyVendor(id) {
-        _royalties[id] = fee;
+        _listings[id].royalty = fee;
     }
 
-    /// @dev Set item mint limit.
+    /// @dev Set item mint limit. Set to 0 for unlimited.
     ///
     /// @param id unique token id
     /// @param limit maximum amount of mints
     function setLimit(uint256 id, uint256 limit) external onlyVendor(id) {
-        require(_supplies[id] <= limit, "limit too low");
-        _limits[id] = limit;
+        require(_listings[id].supply <= limit, "limit too low");
+        _listings[id].limit = limit;
     }
 
     /// @dev Returns royalty info for an item.
@@ -122,7 +125,7 @@ contract Bazaar is Ownable2Step, ERC1155, IERC2981 {
     ///
     /// @return recipient address and royalty amount
     function royaltyInfo(uint256 id, uint256 price) external view returns (address, uint256) {
-        uint256 amount = (price * _royalties[id]) / feeDenominator;
+        uint256 amount = (price * _listings[id].royalty) / feeDenominator;
         return (_catalog.itemInfo(id).vendor, amount);
     }
 
@@ -133,7 +136,7 @@ contract Bazaar is Ownable2Step, ERC1155, IERC2981 {
     ///
     /// @return price of the item in the specified currency
     function priceInfo(uint256 id, IERC20 erc20) external view returns (uint256) {
-        return _prices[id][erc20];
+        return _listings[id].prices[erc20];
     }
 
     /// @dev Returns the total limit of the specified item.
@@ -142,7 +145,7 @@ contract Bazaar is Ownable2Step, ERC1155, IERC2981 {
     ///
     /// @return total minted item limit
     function totalLimit(uint256 id) external view returns (uint256) {
-        return _limits[id];
+        return _listings[id].limit;
     }
 
     /// @dev Returns the total supply of the specified item.
@@ -151,7 +154,7 @@ contract Bazaar is Ownable2Step, ERC1155, IERC2981 {
     ///
     /// @return total number of minted items
     function totalSupply(uint256 id) external view returns (uint256) {
-        return _supplies[id];
+        return _listings[id].supply;
     }
 
     // modifier to check if sender is vendor
@@ -191,11 +194,11 @@ contract Bazaar is Ownable2Step, ERC1155, IERC2981 {
             require(from == address(0) || !item.isSoulbound(), "item is soulbound");
 
             if (from == address(0)) {
-                uint256 supply = _supplies[id];
-                uint256 limit = _limits[id];
+                uint256 supply = _listings[id].supply;
+                uint256 limit = _listings[id].limit;
 
                 require(limit == 0 || supply + amount <= limit, "item limit reached");
-                _supplies[id] = supply + amount;
+                _listings[id].supply = supply + amount;
             }
         }
     }
