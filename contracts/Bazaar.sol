@@ -2,77 +2,50 @@
 pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/access/Ownable2Step.sol";
-import "@openzeppelin/contracts/token/common/ERC2981.sol";
+import "@openzeppelin/contracts/interfaces/IERC2981.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/utils/Address.sol";
-import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 
+import "./Catalog.sol";
+import "./Escrow.sol";
 import "./Items.sol";
 
 /// @title The digital bazaar
-contract Bazaar is Ownable2Step, ERC1155, ERC2981 {
-    using Address for address payable;
-    using Counters for Counters.Counter;
+contract Bazaar is Ownable2Step, ERC1155, IERC2981 {
     using Items for Items.Item;
 
-    // emitted when item vendor is changed
-    event Vendor(address vendor, uint256 indexed id);
-    // emitted when item limit is changed
-    event Limit(uint256 limit, uint256 indexed id);
-    // emitted when item config is changed
-    event Config(uint256 config, uint256 indexed id);
     // emitted when item price is changed
-    event Price(uint256 price, IERC20 erc20, uint256 indexed id);
-    // emitted when funds are deposited
-    event Deposited(address payee, IERC20 erc20, uint256 amount);
-    // emitted when funds are withdrawn
-    event Withdrawn(address payee, IERC20 erc20, uint256 amount);
+    event Appraise(uint256 price, IERC20 erc20, uint256 indexed id);
 
-    // protocol fee basis points numerator
+    // mint fee basis points
     uint96 public immutable feeNumerator;
-    // protocol fee basis points denominator
-    uint96 public immutable feeDenominator;
+    // mint fee / royalty denominator
+    uint96 constant feeDenominator = 10000;
 
-    // token id counter
-    Counters.Counter private _counter;
-    // mapping of token ids to item settings
-    mapping(uint256 => Items.Item) private _items;
+    // catalog of items
+    Catalog private _catalog;
+    // escrow contract
+    Escrow private _escrow;
+
     // mapping of token ids to mapping of erc20 to prices
     mapping(uint256 => mapping(IERC20 => uint256)) private _prices;
-    // mapping of address to mapping of erc20 to deposits
-    mapping(address => mapping(IERC20 => uint256)) private _deposits;
+    // mapping of token ids to supply
+    mapping(uint256 => uint256) private _supplies;
+    // mapping of token ids to limit
+    mapping(uint256 => uint256) private _limits;
+    // mapping of token ids to royalty
+    mapping(uint256 => uint96) private _royalties;
 
-    /// @dev Creates a new Bazaar.
+    /// @dev Create a new Bazaar.
     ///
-    /// @param numerator protocol fee numerator
-    /// @param denominator protocol fee denominator
-    constructor(uint96 numerator, uint96 denominator) ERC1155("") {
-        require(numerator <= denominator, "invalid protocol fee");
-        feeNumerator = numerator;
-        feeDenominator = denominator;
-    }
-
-    /// @dev List an item for sale.
-    ///
-    /// @param limit maximum number of mints
-    /// @param config item configuration mask
-    /// @param tokenURI metadata storage location
-    ///
-    /// @return unique token id
-    function list(uint256 limit, uint256 config, string calldata tokenURI) external returns (uint256) {
-        Items.Item memory item = Items.Item(_msgSender(), 0, limit, config, tokenURI);
-
-        uint256 id = _counter.current();
-        _items[id] = item;
-        _counter.increment();
-
-        emit Vendor(item.vendor, id);
-        emit Limit(item.limit, id);
-        emit Config(item.config, id);
-        emit URI(item.uri, id);
-
-        return id;
+    /// @param catalog address of item catalog
+    /// @param fee mint fee in basis points
+    constructor(Catalog catalog, uint96 fee) ERC1155("") {
+        require(fee <= feeDenominator, "invalid protocol fee");
+        feeNumerator = fee;
+        _catalog = catalog;
+        _escrow = new Escrow();
     }
 
     /// @dev Mint an item.
@@ -82,7 +55,7 @@ contract Bazaar is Ownable2Step, ERC1155, ERC2981 {
     /// @param amount quantity to mint
     /// @param erc20 currency address
     function mint(address to, uint256 id, uint256 amount, IERC20 erc20) external payable {
-        Items.Item storage item = _items[id];
+        Items.Item memory item = _catalog.itemInfo(id);
         require(!item.isPaused(), "minting is paused");
 
         if (item.isFree() || _msgSender() == item.vendor) {
@@ -92,34 +65,12 @@ contract Bazaar is Ownable2Step, ERC1155, ERC2981 {
         uint256 price = _prices[id][erc20] * amount;
         require(price > 0, "invalid currency or amount");
 
-        uint256 fee = (price * feeNumerator) / feeDenominator;
-        _deposit(item.vendor, erc20, price - fee);
-        _deposit(owner(), erc20, fee);
         _mint(to, id, amount, "");
 
-        if (address(erc20) == address(0)) {
-            require(msg.value >= price, "value too low");
-        } else {
-            require(erc20.transferFrom(_msgSender(), address(this), price), "transfer failed");
-        }
-    }
-
-    /// @dev Withdraw deposits.
-    ///
-    /// @param payee address to withdraw to
-    /// @param erc20 currency address
-    function withdraw(address payable payee, IERC20 erc20) external {
-        uint256 amount = _deposits[_msgSender()][erc20];
-        require(amount > 0, "nothing to withdraw");
-
-        _deposits[_msgSender()][erc20] = 0;
-        emit Withdrawn(_msgSender(), erc20, amount);
-
-        if (address(erc20) == address(0)) {
-            payee.sendValue(amount);
-        } else {
-            require(erc20.transfer(payee, amount), "transfer failed");
-        }
+        // deposit fee to owner and remainder to vendor
+        uint256 fee = (amount * feeNumerator) / feeDenominator;
+        _escrow.deposit(item.vendor, erc20, price - fee);
+        _escrow.deposit(owner(), erc20, fee);
     }
 
     /// @dev Update pricing of an item.
@@ -131,53 +82,48 @@ contract Bazaar is Ownable2Step, ERC1155, ERC2981 {
         require(erc20s.length == prices.length, "mismatched erc20 and price");
 
         for (uint256 i = 0; i < erc20s.length; ++i) {
-            _appraise(id, erc20s[i], prices[i]);
+            IERC20 erc20 = erc20s[i];
+            uint256 price = prices[i];
+
+            _prices[id][erc20] = price;
+            emit Appraise(price, erc20, id);
         }
     }
 
-    /// @dev Set the config mask for an item.
+    /// @dev Withdraw deposits.
     ///
-    /// @param id unique token id
-    /// @param config configuration mask
-    function setConfig(uint256 id, uint256 config) external onlyVendor(id) {
-        _items[id].setConfig(config);
-        emit Config(config, id);
-    }
-
-    /// @dev Set the token URI for an item.
-    ///
-    /// @param id unique token id
-    /// @param tokenURI token URI
-    function setURI(uint256 id, string calldata tokenURI) external onlyVendor(id) {
-        _items[id].setURI(tokenURI);
-        emit URI(tokenURI, id);
-    }
-
-    /// @dev Set the maximum number of mints of an item.
-    ///
-    /// @param id unique token id
-    /// @param limit maximum mint limit
-    function setLimit(uint256 id, uint256 limit) external onlyVendor(id) {
-        _items[id].setLimit(limit);
-        emit Limit(limit, id);
-    }
-
-    /// @dev Set the vendor address for an item.
-    ///
-    /// @param id unique token id
-    /// @param vendor new vendor address
-    function setVendor(uint256 id, address vendor) external onlyVendor(id) {
-        _items[id].setVendor(vendor);
-        emit Vendor(vendor, id);
+    /// @param payee address to send funds
+    /// @param erc20 currency address
+    function withdraw(address payable payee, IERC20 erc20) external {
+        _escrow.withdraw(_msgSender(), payee, erc20);
     }
 
     /// @dev Set the royalty receiver and fee for an item.
     ///
     /// @param id unique token id
-    /// @param receiver address of royalty recipient
     /// @param fee numerator of royalty fee
-    function setRoyalty(uint256 id, address receiver, uint96 fee) external onlyVendor(id) {
-        _setTokenRoyalty(id, receiver, fee);
+    function setRoyalty(uint256 id, uint96 fee) external onlyVendor(id) {
+        _royalties[id] = fee;
+    }
+
+    /// @dev Set item mint limit.
+    ///
+    /// @param id unique token id
+    /// @param limit maximum amount of mints
+    function setLimit(uint256 id, uint256 limit) external onlyVendor(id) {
+        require(_supplies[id] <= limit, "limit too low");
+        _limits[id] = limit;
+    }
+
+    /// @dev Returns royalty info for an item.
+    ///
+    /// @param id unique token id
+    /// @param price sale price of item
+    ///
+    /// @return recipient address and royalty amount
+    function royaltyInfo(uint256 id, uint256 price) external view returns (address, uint256) {
+        uint256 amount = (price * _royalties[id]) / feeDenominator;
+        return (_catalog.itemInfo(id).vendor, amount);
     }
 
     /// @dev Returns the price of an item in the specified currency.
@@ -190,13 +136,13 @@ contract Bazaar is Ownable2Step, ERC1155, ERC2981 {
         return _prices[id][erc20];
     }
 
-    /// @dev Returns info about the specified item.
+    /// @dev Returns the total limit of the specified item.
     ///
     /// @param id unique token id
     ///
-    /// @return item config, limit, supply, and vendor
-    function itemInfo(uint256 id) external view returns (Items.Item memory) {
-        return _items[id];
+    /// @return total minted item limit
+    function totalLimit(uint256 id) external view returns (uint256) {
+        return _limits[id];
     }
 
     /// @dev Returns the total supply of the specified item.
@@ -205,30 +151,13 @@ contract Bazaar is Ownable2Step, ERC1155, ERC2981 {
     ///
     /// @return total number of minted items
     function totalSupply(uint256 id) external view returns (uint256) {
-        return _items[id].supply;
+        return _supplies[id];
     }
 
-    /////////////////
-    /// Modifiers ///
-    /////////////////
-
+    // modifier to check if sender is vendor
     modifier onlyVendor(uint256 id) {
-        require(_items[id].vendor == _msgSender(), "sender is not vendor");
+        require(_catalog.itemInfo(id).vendor == _msgSender(), "sender is not vendor");
         _;
-    }
-
-    ////////////////
-    /// Internal ///
-    ////////////////
-
-    function _appraise(uint256 id, IERC20 erc20, uint256 price) internal {
-        _prices[id][erc20] = price;
-        emit Price(price, erc20, id);
-    }
-
-    function _deposit(address payee, IERC20 erc20, uint256 amount) internal {
-        _deposits[payee][erc20] += amount;
-        emit Deposited(payee, erc20, amount);
     }
 
     /////////////////
@@ -236,11 +165,11 @@ contract Bazaar is Ownable2Step, ERC1155, ERC2981 {
     /////////////////
 
     function uri(uint256 id) public view override returns (string memory) {
-        return _items[id].uri;
+        return _catalog.itemInfo(id).uri;
     }
 
-    function supportsInterface(bytes4 interfaceId) public view override(ERC1155, ERC2981) returns (bool) {
-        return super.supportsInterface(interfaceId);
+    function supportsInterface(bytes4 interfaceId) public view override(ERC1155, IERC165) returns (bool) {
+        return interfaceId == type(IERC2981).interfaceId || super.supportsInterface(interfaceId);
     }
 
     function _beforeTokenTransfer(
@@ -257,13 +186,16 @@ contract Bazaar is Ownable2Step, ERC1155, ERC2981 {
             uint256 id = ids[i];
             uint256 amount = amounts[i];
 
-            Items.Item storage item = _items[id];
+            Items.Item memory item = _catalog.itemInfo(id);
             require(!item.isUnique() || balanceOf(to, id) + amount == 1, "item is unique");
+            require(from == address(0) || !item.isSoulbound(), "item is soulbound");
 
             if (from == address(0)) {
-                item.setSupply(item.supply + amount);
-            } else {
-                require(!item.isSoulbound(), "item is soulbound");
+                uint256 supply = _supplies[id];
+                uint256 limit = _limits[id];
+
+                require(limit == 0 || supply + amount <= limit, "item limit reached");
+                _supplies[id] = supply + amount;
             }
         }
     }

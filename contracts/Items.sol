@@ -11,56 +11,29 @@ library Items {
     // config flag enforces one item per address
     uint256 constant CONFIG_UNIQUE = 1 << 3;
 
-    // item settings
+    
     struct Item {
         // vendor address
         address vendor;
-        // count of minted items
-        uint256 supply;
-        // maximum mint limit
-        uint256 limit;
         // config mask
         uint256 config;
-        // token uri
+        // metadata uri
         string uri;
     }
 
-    function setVendor(Item storage item, address vendor) internal {
-        require(vendor != address(0), "invalid vendor address");
-        item.vendor = vendor;
-    }
-
-    function setLimit(Item storage item, uint256 limit) internal {
-        require(limit >= item.supply, "limit too low");
-        item.limit = limit;
-    }
-
-    function setSupply(Item storage item, uint256 supply) internal {
-        require(supply <= item.limit, "limit reached");
-        item.supply = supply;
-    }
-
-    function setConfig(Item storage item, uint256 config) internal {
-        item.config = config;
-    }
-
-    function setURI(Item storage item, string memory uri) internal {
-        item.uri = uri;
-    }
-
-    function isPaused(Item storage item) internal view returns (bool) {
+    function isPaused(Item memory item) public pure returns (bool) {
         return item.config & CONFIG_PAUSED != 0;
     }
 
-    function isFree(Item storage item) internal view returns (bool) {
+    function isFree(Item memory item) public pure returns (bool) {
         return item.config & CONFIG_FREE != 0;
     }
 
-    function isSoulbound(Item storage item) internal view returns (bool) {
+    function isSoulbound(Item memory item) public pure returns (bool) {
         return item.config & CONFIG_SOULBOUND != 0;
     }
 
-    function isUnique(Item storage item) internal view returns (bool) {
+    function isUnique(Item memory item) public pure returns (bool) {
         return item.config & CONFIG_UNIQUE != 0;
     }
 }
