@@ -10,7 +10,6 @@ library Items {
     uint256 constant CONFIG_SOULBOUND = 1 << 2;
     // config flag enforces one item per address
     uint256 constant CONFIG_UNIQUE = 1 << 3;
-
     
     struct Item {
         // vendor address
@@ -21,19 +20,19 @@ library Items {
         string uri;
     }
 
-    function isPaused(Item memory item) public pure returns (bool) {
+    function isPaused(Item memory item) internal pure returns (bool) {
         return item.config & CONFIG_PAUSED != 0;
     }
 
-    function isFree(Item memory item) public pure returns (bool) {
+    function isFree(Item memory item) internal pure returns (bool) {
         return item.config & CONFIG_FREE != 0;
     }
 
-    function isSoulbound(Item memory item) public pure returns (bool) {
+    function isSoulbound(Item memory item) internal pure returns (bool) {
         return item.config & CONFIG_SOULBOUND != 0;
     }
 
-    function isUnique(Item memory item) public pure returns (bool) {
+    function isUnique(Item memory item) internal pure returns (bool) {
         return item.config & CONFIG_UNIQUE != 0;
     }
 }

@@ -68,6 +68,11 @@ contract Catalog is Context {
         emit Vendor(vendor, id);
     }
 
+    /// @dev Returns item info.
+    ///
+    /// @param id unique item id
+    ///
+    /// @return item vendor, config, and uri
     function itemInfo(uint256 id) external view returns (Items.Item memory) {
         return _items[id];
     }
