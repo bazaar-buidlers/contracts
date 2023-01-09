@@ -22,36 +22,15 @@ contract Escrow {
         _owner = msg.sender;
     }
 
-    /// @dev Withdraw funds.
-    ///
-    /// @param owner address to withdraw from
-    /// @param payee address send funds to
-    /// @param erc20 currency address
-    function withdraw(address owner, address payable payee, IERC20 erc20) external onlyOwner {
-        uint256 amount = _deposits[owner][erc20];
-        require(amount > 0, "nothing to withdraw");
-
-        _deposits[owner][erc20] = 0;
-
-        // zero address is native tokens
-        if (address(erc20) == address(0)) {
-            payee.sendValue(amount);
-        } else {
-            require(erc20.transfer(payee, amount), "transfer failed");
-        }
-
-        emit Withdrawn(msg.sender, erc20, amount);
-    }
-
     /// @dev Deposit funds.
     ///
-    /// @param owner address of owner
+    /// @param payee owner of funds
     /// @param erc20 currency address
     /// @param amount value to deposit
-    function deposit(address owner, IERC20 erc20, uint256 amount) external payable onlyOwner {
+    function deposit(address payee, IERC20 erc20, uint256 amount) external payable onlyOwner {
         require(amount > 0, "nothing to deposit");
 
-        _deposits[owner][erc20] += amount;
+        _deposits[payee][erc20] += amount;
 
         // zero address is native tokens
         if (address(erc20) == address(0)) {
@@ -60,7 +39,38 @@ contract Escrow {
             require(erc20.transferFrom(msg.sender, address(this), amount), "transfer failed");
         }
 
-        emit Deposited(owner, erc20, amount);
+        emit Deposited(payee, erc20, amount);
+    }
+
+    /// @dev Withdraw funds.
+    ///
+    /// @param payee owner of funds
+    /// @param recipient address send funds to
+    /// @param erc20 currency address
+    function withdraw(address payee, address payable recipient, IERC20 erc20) external onlyOwner {
+        uint256 amount = _deposits[payee][erc20];
+        require(amount > 0, "nothing to withdraw");
+
+        _deposits[payee][erc20] = 0;
+
+        // zero address is native tokens
+        if (address(erc20) == address(0)) {
+            recipient.sendValue(amount);
+        } else {
+            require(erc20.transfer(recipient, amount), "transfer failed");
+        }
+
+        emit Withdrawn(payee, erc20, amount);
+    }
+
+    /// @dev Returns the total deposits for an address.
+    ///
+    /// @param payee address to return balance of
+    /// @param erc20 currency address
+    ///
+    /// @return total deposits
+    function depositsOf(address payee, IERC20 erc20) external view returns (uint256) {
+        return _deposits[payee][erc20];
     }
 
     // modifier to check if sender is owner

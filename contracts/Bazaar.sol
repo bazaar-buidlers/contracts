@@ -101,11 +101,12 @@ contract Bazaar is Ownable2Step, ERC1155, IERC2981 {
         _escrow.withdraw(_msgSender(), payee, erc20);
     }
 
-    /// @dev Set the royalty receiver and fee for an item.
+    /// @dev Set the royalty fee for an item.
     ///
     /// @param id unique token id
     /// @param fee numerator of royalty fee
     function setRoyalty(uint256 id, uint96 fee) external onlyVendor(id) {
+        require(fee <= feeDenominator, "fee will exceed sale price");
         _listings[id].royalty = fee;
     }
 
@@ -114,7 +115,7 @@ contract Bazaar is Ownable2Step, ERC1155, IERC2981 {
     /// @param id unique token id
     /// @param limit maximum amount of mints
     function setLimit(uint256 id, uint256 limit) external onlyVendor(id) {
-        require(_listings[id].supply <= limit, "limit too low");
+        require(_listings[id].supply <= limit, "limit lower than supply");
         _listings[id].limit = limit;
     }
 
