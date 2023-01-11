@@ -34,12 +34,12 @@ contract Bazaar is Ownable2Step, ERC1155, IERC2981 {
         uint256 limit;
         // royalty fee basis points
         uint96 royalty;
-        // mapping of erc20 to price
-        mapping(IERC20 => uint256) prices;
     }
     
     // mapping of token id to listing
     mapping(uint256 => Listing) private _listings;
+    // mapping of token id to mapping of erc20 to price
+    mapping(uint256 => mapping(IERC20 => uint256)) _prices;
 
     /// @dev Create a new Bazaar.
     ///
@@ -67,7 +67,7 @@ contract Bazaar is Ownable2Step, ERC1155, IERC2981 {
             return _mint(to, id, amount, "");
         }
 
-        uint256 price = _listings[id].prices[erc20] * amount;
+        uint256 price = _prices[id][erc20] * amount;
         require(price > 0, "invalid currency or amount");
 
         _mint(to, id, amount, "");
@@ -90,7 +90,7 @@ contract Bazaar is Ownable2Step, ERC1155, IERC2981 {
             IERC20 erc20 = erc20s[i];
             uint256 price = prices[i];
 
-            _listings[id].prices[erc20] = price;
+            _prices[id][erc20] = price;
             emit Appraise(price, erc20, id);
         }
     }
@@ -139,7 +139,7 @@ contract Bazaar is Ownable2Step, ERC1155, IERC2981 {
     ///
     /// @return price of the item in the specified currency
     function priceInfo(uint256 id, IERC20 erc20) external view returns (uint256) {
-        return _listings[id].prices[erc20];
+        return _prices[id][erc20];
     }
 
     /// @dev Returns the total limit of the specified item.
@@ -193,15 +193,16 @@ contract Bazaar is Ownable2Step, ERC1155, IERC2981 {
             uint256 amount = amounts[i];
 
             Items.Item memory item = catalog.itemInfo(id);
+            require(!item.isSoulbound() || from == address(0), "item is soulbound");
             require(!item.isUnique() || balanceOf(to, id) + amount == 1, "item is unique");
-            require(from == address(0) || !item.isSoulbound(), "item is soulbound");
 
+            // minting when from address is zero
             if (from == address(0)) {
-                uint256 supply = _listings[id].supply;
-                uint256 limit = _listings[id].limit;
+                Listing storage listing = _listings[id];
+                uint256 supply = listing.supply + amount;
 
-                require(limit == 0 || supply + amount <= limit, "item limit reached");
-                _listings[id].supply = supply + amount;
+                require(listing.limit == 0 || supply <= listing.limit, "item limit reached");
+                listing.supply = supply;
             }
         }
     }
