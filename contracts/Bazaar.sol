@@ -61,7 +61,7 @@ contract Bazaar is Ownable2Step, ERC1155, IERC2981 {
     /// @param erc20 currency address
     function mint(address to, uint256 id, uint256 amount, IERC20 erc20) external payable {
         Items.Item memory item = catalog.itemInfo(id);
-        require(!item.isPaused(), "minting is paused");
+        require(!item.isPaused() || _msgSender() == item.vendor, "minting is paused");
 
         if (item.isFree() || _msgSender() == item.vendor) {
             return _mint(to, id, amount, "");
