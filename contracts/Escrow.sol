@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
-contract Escrow {
+contract Escrow is Ownable {
     using Address for address payable;
 
     // emitted when funds are deposited
@@ -12,15 +13,8 @@ contract Escrow {
     // emitted when funds are withdrawn
     event Withdrawn(address payee, address erc20, uint256 amount);
 
-    // escrow owner should never change because owner is a contract
-    address private immutable _owner;
     // mapping of address to mapping of erc20 to deposits
     mapping(address => mapping(address => uint256)) private _deposits;
-
-    /// @dev Creates a new Escrow.
-    constructor() {
-        _owner = msg.sender;
-    }
 
     /// @dev Deposit funds.
     ///
@@ -69,11 +63,5 @@ contract Escrow {
     /// @return total deposits
     function depositsOf(address payee, address erc20) external view returns (uint256) {
         return _deposits[payee][erc20];
-    }
-
-    // modifier to check if sender is owner
-    modifier onlyOwner() {
-        require(msg.sender == _owner, "sender is not owner");
-        _;
     }
 }

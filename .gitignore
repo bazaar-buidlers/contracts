@@ -24,3 +24,6 @@ docs/
 
 # MacOS
 .DS_Store
+
+# OpenZeppelin
+.openzeppelin/unknown-*.json
