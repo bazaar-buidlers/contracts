@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/access/Ownable2Step.sol";
 import "@openzeppelin/contracts/interfaces/IERC2981.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -11,27 +10,25 @@ import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import "./Escrow.sol";
 import "./Listings.sol";
 
-contract Bazaar is Ownable2Step, ERC1155, IERC2981 {
+contract Bazaar is ERC1155, IERC2981 {
     using Listings for Listings.Listing;
     using Counters for Counters.Counter;
 
     // emitted when vendor is changed
-    event Vendor(address vendor, uint256 indexed id);
+    event TransferVendor(address vendor, uint256 indexed id);
     // emitted when config is changed
-    event Config(uint256 config, uint256 indexed id);
-    // emitted when limit is changed
-    event Limit(uint256 limit, uint256 indexed id);
-    // emitted when royalty is changed
-    event Royalty(uint96 fee, uint256 indexed id);
+    event Configure(uint256 config, uint256 limit, uint96 royalty, uint256 indexed id);
     // emitted when item price is changed
     event Appraise(uint256 price, IERC20 erc20, uint256 indexed id);
 
-    // mint fee basis points
-    uint96 public immutable feeNumerator;
-    // mint fee / royalty denominator
-    uint96 public constant feeDenominator = 10000;
+    // contract owner address
+    address public owner;
     // escrow contract
     Escrow public escrow;
+    // mint fee basis points
+    uint96 public feeNumerator;
+    // mint fee / royalty denominator
+    uint96 public constant feeDenominator = 10000;
     
     // product id counter
     Counters.Counter private _counter;
@@ -66,10 +63,8 @@ contract Bazaar is Ownable2Step, ERC1155, IERC2981 {
         _listings[id] = listing;
         _counter.increment();
 
-        emit Vendor(listing.vendor, id);
-        emit Config(listing.config, id);
-        emit Limit(listing.limit, id);
-        emit Royalty(listing.royalty, id);
+        emit TransferVendor(listing.vendor, id);
+        emit Configure(listing.config, listing.limit, listing.royalty, id);
         emit URI(listing.uri, id);
 
         return id;
@@ -97,7 +92,7 @@ contract Bazaar is Ownable2Step, ERC1155, IERC2981 {
         // deposit fee to owner and remainder to vendor
         uint256 fee = (amount * feeNumerator) / feeDenominator;
         escrow.deposit(listing.vendor, erc20, price - fee);
-        escrow.deposit(owner(), erc20, fee);
+        escrow.deposit(owner, erc20, fee);
     }
 
     /// @dev Update pricing of an item.
@@ -117,51 +112,41 @@ contract Bazaar is Ownable2Step, ERC1155, IERC2981 {
         }
     }
 
-    /// @dev Set the config mask for an item.
+    /// @dev Update the configuration of a listing.
     ///
-    /// @param id unique item id
-    /// @param config item config mask
-    function setConfig(uint256 id, uint256 config) external onlyVendor(id) {
-        _listings[id].config = config;
-        emit Config(config, id);
+    /// @param id unique token id
+    /// @param config configuration mask
+    /// @param limit max mint limit
+    /// @param royalty numerator of royalty fee
+    function configure(uint256 id, uint256 config, uint256 limit, uint96 royalty) external onlyVendor(id) {
+        Listings.Listing storage listing = _listings[id];
+
+        require(royalty <= feeDenominator, "fee will exceed sale price");
+        require(limit == 0 || limit <= listing.supply, "limit lower than supply");
+        
+        listing.config = config;
+        listing.limit = limit;
+        listing.royalty = royalty;
+        
+        emit Configure(config, limit, royalty, id);
     }
 
-    /// @dev Set the metadata URI for an item.
+    /// @dev Update the metadata URI of a listing.
     ///
-    /// @param id unique item id
+    /// @param id unique token id
     /// @param tokenURI token metadata URI
-    function setURI(uint256 id, string calldata tokenURI) external onlyVendor(id) {
+    function update(uint256 id, string calldata tokenURI) external onlyVendor(id) {
         _listings[id].uri = tokenURI;
         emit URI(tokenURI, id);
     }
 
-    /// @dev Set the vendor address for an item.
+    /// @dev Transfer a listing to a new vendor.
     ///
-    /// @param id unique item id
+    /// @param id unique token id
     /// @param vendor address of new vendor
-    function setVendor(uint256 id, address vendor) external onlyVendor(id) {
+    function transferVendor(uint256 id, address vendor) external onlyVendor(id) {
         _listings[id].vendor = vendor;
-        emit Vendor(vendor, id);
-    }
-
-    /// @dev Set the royalty fee for an item.
-    ///
-    /// @param id unique token id
-    /// @param fee numerator of royalty fee
-    function setRoyalty(uint256 id, uint96 fee) external onlyVendor(id) {
-        require(fee <= feeDenominator, "fee will exceed sale price");
-        _listings[id].royalty = fee;
-        emit Royalty(fee, id);
-    }
-
-    /// @dev Set item mint limit. Set to 0 for unlimited.
-    ///
-    /// @param id unique token id
-    /// @param limit maximum amount of mints
-    function setLimit(uint256 id, uint256 limit) external onlyVendor(id) {
-        require(_listings[id].supply <= limit, "limit lower than supply");
-        _listings[id].limit = limit;
-        emit Limit(limit, id);
+        emit TransferVendor(vendor, id);
     }
 
     /// @dev Withdraw deposits.
