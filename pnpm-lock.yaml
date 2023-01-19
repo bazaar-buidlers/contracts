@@ -5,7 +5,9 @@ specifiers:
   '@nomicfoundation/hardhat-network-helpers': ^1.0.7
   '@nomiclabs/hardhat-ethers': ^2.2.1
   '@nomiclabs/hardhat-etherscan': ^3.1.4
-  '@openzeppelin/contracts': ^4.8.0
+  '@openzeppelin/contracts': ^4.8.1
+  '@openzeppelin/contracts-upgradeable': ^4.8.1
+  '@openzeppelin/hardhat-upgrades': ^1.22.1
   '@typechain/ethers-v5': ^7.2.0
   '@typechain/hardhat': ^2.3.1
   '@types/chai': ^4.3.4
@@ -38,7 +40,9 @@ devDependencies:
   '@nomicfoundation/hardhat-network-helpers': 1.0.7_hardhat@2.12.5
   '@nomiclabs/hardhat-ethers': 2.2.1_ljvdvd7rotyr7m3znq3ladptlm
   '@nomiclabs/hardhat-etherscan': 3.1.4_hardhat@2.12.5
-  '@openzeppelin/contracts': 4.8.0
+  '@openzeppelin/contracts': 4.8.1
+  '@openzeppelin/contracts-upgradeable': 4.8.1
+  '@openzeppelin/hardhat-upgrades': 1.22.1_abqxxxa33dmibzvvolsldc3nqe
   '@typechain/ethers-v5': 7.2.0_asj7rnfsa5v2ckncrntdcrigy4
   '@typechain/hardhat': 2.3.1_htuga5nqydk4p2an7umpfu7hx4
   '@types/chai': 4.3.4
@@ -837,8 +841,51 @@ packages:
       - supports-color
     dev: true
 
-  /@openzeppelin/contracts/4.8.0:
-    resolution: {integrity: sha512-AGuwhRRL+NaKx73WKRNzeCxOCOCxpaqF+kp8TJ89QzAipSwZy/NoflkWaL9bywXFRhIzXt8j38sfF7KBKCPWLw==}
+  /@openzeppelin/contracts-upgradeable/4.8.1:
+    resolution: {integrity: sha512-1wTv+20lNiC0R07jyIAbHU7TNHKRwGiTGRfiNnA8jOWjKT98g5OgLpYWOi40Vgpk8SPLA9EvfJAbAeIyVn+7Bw==}
+    dev: true
+
+  /@openzeppelin/contracts/4.8.1:
+    resolution: {integrity: sha512-xQ6eUZl+RDyb/FiZe1h+U7qr/f4p/SrTSQcTPH2bjur3C5DbuW/zFgCU/b1P/xcIaEqJep+9ju4xDRi3rmChdQ==}
+    dev: true
+
+  /@openzeppelin/hardhat-upgrades/1.22.1_abqxxxa33dmibzvvolsldc3nqe:
+    resolution: {integrity: sha512-MdoitCTLl4zwMU8MeE/bCj+7JMWBEvd38XqJkw36PkJrXlbv6FedDVCPoumMAhpmtymm0nTwTYYklYG+L6WiiQ==}
+    hasBin: true
+    peerDependencies:
+      '@nomiclabs/hardhat-ethers': ^2.0.0
+      '@nomiclabs/hardhat-etherscan': ^3.1.0
+      '@nomiclabs/harhdat-etherscan': '*'
+      ethers: ^5.0.5
+      hardhat: ^2.0.2
+    peerDependenciesMeta:
+      '@nomiclabs/harhdat-etherscan':
+        optional: true
+    dependencies:
+      '@nomiclabs/hardhat-ethers': 2.2.1_ljvdvd7rotyr7m3znq3ladptlm
+      '@nomiclabs/hardhat-etherscan': 3.1.4_hardhat@2.12.5
+      '@openzeppelin/upgrades-core': 1.21.0
+      chalk: 4.1.2
+      debug: 4.3.4
+      ethers: 5.7.2
+      hardhat: 2.12.5_z6wznmtyb6ovnulj6iujpct7um
+      proper-lockfile: 4.1.2
+    transitivePeerDependencies:
+      - supports-color
+    dev: true
+
+  /@openzeppelin/upgrades-core/1.21.0:
+    resolution: {integrity: sha512-Eoi1N7fx0f7iWixd59AbWL3XyOtgRvHMboCK0p7Ep97shGeRimX8RXmJllDTRDdjtPeG8Q1icFnSMIfs8dxb/A==}
+    dependencies:
+      cbor: 8.1.0
+      chalk: 4.1.2
+      compare-versions: 5.0.3
+      debug: 4.3.4
+      ethereumjs-util: 7.1.5
+      proper-lockfile: 4.1.2
+      solidity-ast: 0.4.40
+    transitivePeerDependencies:
+      - supports-color
     dev: true
 
   /@scure/base/1.1.1:
@@ -2183,6 +2230,10 @@ packages:
 
   /commander/3.0.2:
     resolution: {integrity: sha512-Gar0ASD4BDyKC4hl4DwHqDrmvjoxWKZigVnAbn5H1owvm4CxCPdb0HQDehwNYMJpla5+M2tPmPARzhtYuwpHow==}
+    dev: true
+
+  /compare-versions/5.0.3:
+    resolution: {integrity: sha512-4UZlZP8Z99MGEY+Ovg/uJxJuvoXuN4M6B3hKaiackiHrgzQFEe3diJi1mf1PNHbFujM7FvLrK2bpgIaImbtZ1A==}
     dev: true
 
   /concat-map/0.0.1:
@@ -5536,6 +5587,14 @@ packages:
       asap: 2.0.6
     dev: true
 
+  /proper-lockfile/4.1.2:
+    resolution: {integrity: sha512-TjNPblN4BwAWMXU8s9AEz4JmQxnD1NNL7bNOY/AKUzyamc379FWASUhc/K1pL2noVb+XmZKLL68cjzLsiOAMaA==}
+    dependencies:
+      graceful-fs: 4.2.10
+      retry: 0.12.0
+      signal-exit: 3.0.7
+    dev: true
+
   /proxy-addr/2.0.7:
     resolution: {integrity: sha512-llQsMLSUDUPT44jdrU/O37qlnifitDP+ZwrmmZcoSKyLKvtZxpyV0n2/bD/N4tBAAZ/gJEdZU7KMraoK1+XYAg==}
     engines: {node: '>= 0.10'}
@@ -5831,6 +5890,11 @@ packages:
     dependencies:
       onetime: 2.0.1
       signal-exit: 3.0.7
+    dev: true
+
+  /retry/0.12.0:
+    resolution: {integrity: sha512-9LkiTwjUh6rT555DtE9rTX+BKByPfrMzEAtnlEtdEwr3Nkffwiihqe2bWADg+OQRjt9gl6ICdmB/ZFDCGAtSow==}
+    engines: {node: '>= 4'}
     dev: true
 
   /reusify/1.0.4:
@@ -6181,6 +6245,10 @@ packages:
       prettier: 1.19.1
     transitivePeerDependencies:
       - supports-color
+    dev: true
+
+  /solidity-ast/0.4.40:
+    resolution: {integrity: sha512-M8uLBT2jgFB7B0iVAC5a2l71J8vim7aEm03AZkaHbDqyrl1pE+i5PriMEw6WlwGfHp3/Ym7cn9BqvVLQgRk+Yw==}
     dev: true
 
   /solidity-comments-extractor/0.0.7:

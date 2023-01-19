@@ -1,25 +1,25 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/interfaces/IERC2981.sol";
-import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/utils/Counters.sol";
-import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
+import "@openzeppelin/contracts-upgradeable/interfaces/IERC2981Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
 
 import "./Escrow.sol";
 import "./Listings.sol";
 
-contract Bazaar is ERC1155, IERC2981 {
+contract Bazaar is Initializable, ERC1155Upgradeable, IERC2981Upgradeable {
     using Listings for Listings.Listing;
-    using Counters for Counters.Counter;
+    using CountersUpgradeable for CountersUpgradeable.Counter;
 
     // emitted when vendor is changed
     event TransferVendor(address vendor, uint256 indexed id);
     // emitted when config is changed
     event Configure(uint256 config, uint256 limit, uint96 royalty, uint256 indexed id);
     // emitted when item price is changed
-    event Appraise(uint256 price, IERC20 erc20, uint256 indexed id);
+    event Appraise(uint256 price, address erc20, uint256 indexed id);
 
     // contract owner address
     address public owner;
@@ -28,23 +28,32 @@ contract Bazaar is ERC1155, IERC2981 {
     // mint fee basis points
     uint96 public feeNumerator;
     // mint fee / royalty denominator
-    uint96 public constant feeDenominator = 10000;
+    uint96 public constant FEE_DENOMINATOR = 10000;
     
     // product id counter
-    Counters.Counter private _counter;
+    CountersUpgradeable.Counter private _counter;
     // mapping of token id to listing
     mapping(uint256 => Listings.Listing) private _listings;
     // mapping of token id to mapping of erc20 to price
-    mapping(uint256 => mapping(IERC20 => uint256)) _prices;
+    mapping(uint256 => mapping(address => uint256)) _prices;
 
-    /// @dev Create a new Bazaar.
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    /// @dev Initialize a new Bazaar.
     ///
-    /// @param _escrow address of escrow
-    /// @param _feeNumerator mint fee in basis points
-    constructor(Escrow _escrow, uint96 _feeNumerator) ERC1155("") {
-        require(_feeNumerator <= feeDenominator, "invalid protocol fee");
+    /// @param _feeNumerator numerator of protocol fee
+    /// @param _escrow Escrow contract address
+    function initialize(uint96 _feeNumerator, Escrow _escrow) public initializer {
+        require(_feeNumerator <= FEE_DENOMINATOR, "invalid protocol fee");
+
         feeNumerator = _feeNumerator;
         escrow = _escrow;
+        owner = _msgSender();
+
+        __ERC1155_init("");
     }
 
     /// @dev List a new item.
@@ -56,7 +65,7 @@ contract Bazaar is ERC1155, IERC2981 {
     ///
     /// @return unique token id
     function list(uint256 config, uint256 limit, uint96 royalty, string calldata tokenURI) external returns (uint256) {
-        require(royalty <= feeDenominator, "fee will exceed sale price");
+        require(royalty <= FEE_DENOMINATOR, "fee will exceed sale price");
         Listings.Listing memory listing = Listings.Listing(_msgSender(), config, 0, limit, royalty, tokenURI);
 
         uint256 id = _counter.current();
@@ -76,7 +85,7 @@ contract Bazaar is ERC1155, IERC2981 {
     /// @param id unique token id
     /// @param amount quantity to mint
     /// @param erc20 currency address
-    function mint(address to, uint256 id, uint256 amount, IERC20 erc20, bytes calldata data) external payable {
+    function mint(address to, uint256 id, uint256 amount, address erc20, bytes calldata data) external payable {
         Listings.Listing storage listing = _listings[id];
         require(!listing.isPaused() || _msgSender() == listing.vendor, "minting is paused");
 
@@ -90,7 +99,7 @@ contract Bazaar is ERC1155, IERC2981 {
         _mint(to, id, amount, data);
 
         // deposit fee to owner and remainder to vendor
-        uint256 fee = (amount * feeNumerator) / feeDenominator;
+        uint256 fee = (amount * feeNumerator) / FEE_DENOMINATOR;
         escrow.deposit(listing.vendor, erc20, price - fee);
         escrow.deposit(owner, erc20, fee);
     }
@@ -100,11 +109,11 @@ contract Bazaar is ERC1155, IERC2981 {
     /// @param id unique token id
     /// @param erc20s list of currencies
     /// @param prices list of prices
-    function appraise(uint256 id, IERC20[] calldata erc20s, uint256[] calldata prices) external onlyVendor(id) {
+    function appraise(uint256 id, address[] calldata erc20s, uint256[] calldata prices) external onlyVendor(id) {
         require(erc20s.length == prices.length, "mismatched erc20 and price");
 
         for (uint256 i = 0; i < erc20s.length; ++i) {
-            IERC20 erc20 = erc20s[i];
+            address erc20 = erc20s[i];
             uint256 price = prices[i];
 
             _prices[id][erc20] = price;
@@ -121,7 +130,7 @@ contract Bazaar is ERC1155, IERC2981 {
     function configure(uint256 id, uint256 config, uint256 limit, uint96 royalty) external onlyVendor(id) {
         Listings.Listing storage listing = _listings[id];
 
-        require(royalty <= feeDenominator, "fee will exceed sale price");
+        require(royalty <= FEE_DENOMINATOR, "fee will exceed sale price");
         require(limit == 0 || limit <= listing.supply, "limit lower than supply");
         
         listing.config = config;
@@ -153,7 +162,7 @@ contract Bazaar is ERC1155, IERC2981 {
     ///
     /// @param payee address to send funds
     /// @param erc20 currency address
-    function withdraw(address payable payee, IERC20 erc20) external {
+    function withdraw(address payable payee, address erc20) external {
         escrow.withdraw(_msgSender(), payee, erc20);
     }
 
@@ -163,7 +172,7 @@ contract Bazaar is ERC1155, IERC2981 {
     /// @param erc20 currency address
     ///
     /// @return total deposits
-    function depositsOf(address payee, IERC20 erc20) external view returns (uint256) {
+    function depositsOf(address payee, address erc20) external view returns (uint256) {
         return escrow.depositsOf(payee, erc20);
     }
 
@@ -175,7 +184,7 @@ contract Bazaar is ERC1155, IERC2981 {
     /// @return recipient address and royalty amount
     function royaltyInfo(uint256 id, uint256 price) external view returns (address, uint256) {
         Listings.Listing memory listing = _listings[id];
-        uint256 amount = (price * listing.royalty) / feeDenominator;
+        uint256 amount = (price * listing.royalty) / FEE_DENOMINATOR;
         return (listing.vendor, amount);
     }
 
@@ -185,7 +194,7 @@ contract Bazaar is ERC1155, IERC2981 {
     /// @param erc20 currency address
     ///
     /// @return price of the listing in the specified currency
-    function priceInfo(uint256 id, IERC20 erc20) external view returns (uint256) {
+    function priceInfo(uint256 id, address erc20) external view returns (uint256) {
         return _prices[id][erc20];
     }
 
@@ -208,12 +217,22 @@ contract Bazaar is ERC1155, IERC2981 {
     /// Overrides ///
     /////////////////
 
-    function uri(uint256 id) public view override returns (string memory) {
+    function uri(uint256 id) 
+        public 
+        view 
+        override 
+        returns (string memory) 
+    {
         return _listings[id].uri;
     }
 
-    function supportsInterface(bytes4 interfaceId) public view override(ERC1155, IERC165) returns (bool) {
-        return interfaceId == type(IERC2981).interfaceId 
+    function supportsInterface(bytes4 interfaceId) 
+        public 
+        view 
+        override(ERC1155Upgradeable, IERC165Upgradeable)
+        returns (bool) 
+    {
+        return interfaceId == type(IERC2981Upgradeable).interfaceId 
             || super.supportsInterface(interfaceId);
     }
 
@@ -224,7 +243,7 @@ contract Bazaar is ERC1155, IERC2981 {
         uint256[] memory ids,
         uint256[] memory amounts,
         bytes memory data
-    ) internal override(ERC1155) {
+    ) internal override(ERC1155Upgradeable) {
         super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
 
         for (uint256 i = 0; i < ids.length; ++i) {
