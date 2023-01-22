@@ -68,7 +68,15 @@ contract Bazaar is Initializable, ERC1155Upgradeable, IERC2981Upgradeable {
     /// @return unique token id
     function list(uint256 config, uint256 limit, uint96 royalty, string calldata tokenURI) external returns (uint256) {
         require(royalty <= FEE_DENOMINATOR, "fee will exceed sale price");
-        Listings.Listing memory listing = Listings.Listing(_msgSender(), config, 0, limit, royalty, tokenURI);
+        
+        Listings.Listing memory listing = Listings.Listing({
+            vendor: _msgSender(),
+            config: config,
+            supply: 0,
+            limit: limit,
+            royalty: royalty,
+            uri: tokenURI
+        });
 
         uint256 id = _counter.current();
         _listings[id] = listing;
@@ -133,7 +141,7 @@ contract Bazaar is Initializable, ERC1155Upgradeable, IERC2981Upgradeable {
         Listings.Listing storage listing = _listings[id];
 
         require(royalty <= FEE_DENOMINATOR, "fee will exceed sale price");
-        require(limit == 0 || limit <= listing.supply, "limit lower than supply");
+        require(limit == 0 || limit >= listing.supply, "limit lower than supply");
         
         listing.config = config;
         listing.limit = limit;
