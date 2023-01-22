@@ -61,7 +61,7 @@ contract Escrow is Ownable {
     /// @param erc20 currency address
     ///
     /// @return total deposits
-    function depositsOf(address payee, address erc20) external view returns (uint256) {
+    function depositsOf(address payee, address erc20) external view onlyOwner returns (uint256) {
         return _deposits[payee][erc20];
     }
 }

@@ -37,6 +37,13 @@ contract Bazaar is Initializable, ERC1155Upgradeable, IERC2981Upgradeable {
     // mapping of token id to mapping of erc20 to price
     mapping(uint256 => mapping(address => uint256)) _prices;
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor(bool disableInitializers) {
+        if (disableInitializers) {
+            _disableInitializers();
+        }
+    }
+
     /// @dev Initialize a new Bazaar.
     ///
     /// @param _feeNumerator numerator of protocol fee

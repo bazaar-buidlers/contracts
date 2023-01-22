@@ -7,8 +7,11 @@ async function main() {
   await escrow.deployed();
   console.log(`Escrow deployed to ${escrow.address}`);
 
+  const proxyArgs = [300, escrow.address];
+  const proxyOpts = { constructorArgs: [true] };
+
   const Bazaar = await ethers.getContractFactory('Bazaar');
-  const bazaar = await upgrades.deployProxy(Bazaar, [300, escrow.address]);
+  const bazaar = await upgrades.deployProxy(Bazaar, proxyArgs, proxyOpts);
 
   await bazaar.deployed();
   console.log(`Bazaar deployed to ${bazaar.address}`);
