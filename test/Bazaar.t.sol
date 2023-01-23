@@ -11,11 +11,10 @@ contract BazaarTest is Test {
 
     function setUp() public {
         escrow = new Escrow();
-
         bazaar = new Bazaar(false);
-        bazaar.initialize(FEE_NUMERATOR, escrow);
 
         escrow.transferOwnership(address(bazaar));
+        bazaar.initialize(FEE_NUMERATOR, escrow);
     }
 
     function testOwner() public {
