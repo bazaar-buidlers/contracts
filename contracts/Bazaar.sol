@@ -38,10 +38,8 @@ contract Bazaar is Initializable, ERC1155Upgradeable, IERC2981Upgradeable {
     mapping(uint256 => mapping(address => uint256)) _prices;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor(bool disableInitializers) {
-        if (disableInitializers) {
-            _disableInitializers();
-        }
+    constructor() {
+        _disableInitializers();
     }
 
     /// @dev Initialize a new Bazaar.
@@ -108,10 +106,14 @@ contract Bazaar is Initializable, ERC1155Upgradeable, IERC2981Upgradeable {
 
         _mint(to, id, amount, data);
 
-        // deposit fee to owner and remainder to vendor
-        uint256 fee = (amount * feeNumerator) / FEE_DENOMINATOR;
-        escrow.deposit(listing.vendor, erc20, price - fee);
-        escrow.deposit(owner, erc20, fee);
+        uint256 fee = (price * feeNumerator) / FEE_DENOMINATOR;
+        if (erc20 == address(0)) {
+            escrow.deposit{ value: price - fee }(_msgSender(), listing.vendor, erc20, price - fee);
+            escrow.deposit{ value: fee }(_msgSender(), owner, erc20, fee);
+        } else {
+            escrow.deposit(_msgSender(), listing.vendor, erc20, price - fee);
+            escrow.deposit(_msgSender(), owner, erc20, fee);
+        }
     }
 
     /// @dev Update pricing of an item.

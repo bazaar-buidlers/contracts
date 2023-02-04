@@ -18,40 +18,41 @@ contract Escrow is Ownable {
 
     /// @dev Deposit funds.
     ///
-    /// @param payee owner of funds
+    /// @param from spender address
+    /// @param to recipient address
     /// @param erc20 currency address
     /// @param amount value to deposit
-    function deposit(address payee, address erc20, uint256 amount) external payable onlyOwner {
+    function deposit(address from, address to, address erc20, uint256 amount) external payable onlyOwner {
         require(amount > 0, "nothing to deposit");
 
-        _deposits[payee][erc20] += amount;
-        emit Deposited(payee, erc20, amount);
+        _deposits[to][erc20] += amount;
+        emit Deposited(to, erc20, amount);
 
         // zero address is native tokens
         if (erc20 == address(0)) {
             require(msg.value == amount, "value must equal amount");
         } else {
-            require(IERC20(erc20).transferFrom(msg.sender, address(this), amount), "transfer failed");
+            require(IERC20(erc20).transferFrom(from, address(this), amount), "transfer failed");
         }
     }
 
     /// @dev Withdraw funds.
     ///
-    /// @param payee owner of funds
-    /// @param recipient address send funds to
+    /// @param from spender address
+    /// @param to recipient address
     /// @param erc20 currency address
-    function withdraw(address payee, address payable recipient, address erc20) external onlyOwner {
-        uint256 amount = _deposits[payee][erc20];
+    function withdraw(address from, address payable to, address erc20) external onlyOwner {
+        uint256 amount = _deposits[from][erc20];
         require(amount > 0, "nothing to withdraw");
 
-        _deposits[payee][erc20] = 0;
-        emit Withdrawn(payee, erc20, amount);
+        _deposits[from][erc20] = 0;
+        emit Withdrawn(from, erc20, amount);
 
         // zero address is native tokens
         if (erc20 == address(0)) {
-            recipient.sendValue(amount);
+            to.sendValue(amount);
         } else {
-            require(IERC20(erc20).transfer(recipient, amount), "transfer failed");
+            require(IERC20(erc20).transfer(to, amount), "transfer failed");
         }
     }
 
