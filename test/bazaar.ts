@@ -30,7 +30,7 @@ describe('Bazaar.list', function() {
   it('should revert when royalty is greater than fee denominator', async function() {
     const { bazaar } = await loadFixture(deployBazaar);
     
-    const feeDenominator = await bazaar.FEE_DENOMINATOR();
+    const feeDenominator = await bazaar.feeDenominator();
     const royalty = feeDenominator.add(1);
 
     const tx = bazaar.list(0, 0, royalty, "test");
@@ -59,7 +59,7 @@ describe('Bazaar.mint', function() {
     expect(info.supply).to.equal(amount);
 
     const feeNumerator = await bazaar.feeNumerator();
-    const feeDenominator = await bazaar.FEE_DENOMINATOR();
+    const feeDenominator = await bazaar.feeDenominator();
 
     const sellerDeposits = await bazaar.depositsOf(seller.address, erc20s[0]);
     const ownerDeposits = await bazaar.depositsOf(owner.address, erc20s[0]);
@@ -92,7 +92,7 @@ describe('Bazaar.mint', function() {
     expect(info.supply).to.equal(amount);
 
     const feeNumerator = await bazaar.feeNumerator();
-    const feeDenominator = await bazaar.FEE_DENOMINATOR();
+    const feeDenominator = await bazaar.feeDenominator();
 
     const sellerDeposits = await bazaar.depositsOf(seller.address, erc20s[0]);
     const ownerDeposits = await bazaar.depositsOf(owner.address, erc20s[0]);
@@ -243,7 +243,7 @@ describe('Bazaar.configure', function() {
 
     await bazaar.connect(seller).list(0, 0, 0, "test");
 
-    const feeDenominator = await bazaar.FEE_DENOMINATOR();
+    const feeDenominator = await bazaar.feeDenominator();
     const royalty = feeDenominator.add(1);
 
     const tx = bazaar.connect(seller).configure(0, 0, 0, royalty);
@@ -315,7 +315,7 @@ describe('Bazaar.withdraw', function() {
     await bazaar.connect(buyer).mint(buyer.address, 0, amount, erc20s[0], [], { value });
 
     const feeNumerator = await bazaar.feeNumerator();
-    const feeDenominator = await bazaar.FEE_DENOMINATOR();
+    const feeDenominator = await bazaar.feeDenominator();
     const fee = value.mul(feeNumerator).div(feeDenominator);
 
     const beforeBalance = await holding.getBalance();
@@ -346,7 +346,7 @@ describe('Bazaar.withdraw', function() {
     await bazaar.connect(buyer).mint(buyer.address, 0, amount, erc20s[0], []);
 
     const feeNumerator = await bazaar.feeNumerator();
-    const feeDenominator = await bazaar.FEE_DENOMINATOR();
+    const feeDenominator = await bazaar.feeDenominator();
     const fee = value.mul(feeNumerator).div(feeDenominator);
 
     const beforeBalance = await token.balanceOf(holding.address);
