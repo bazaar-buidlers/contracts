@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/interfaces/IERC2981Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155Upgradeable.sol";
@@ -10,7 +11,7 @@ import "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeabl
 import "./Escrow.sol";
 import "./Listings.sol";
 
-contract Bazaar is Initializable, ERC1155Upgradeable, IERC2981Upgradeable {
+contract Bazaar is Initializable, OwnableUpgradeable, ERC1155Upgradeable, IERC2981Upgradeable {
     using Listings for Listings.Listing;
     using CountersUpgradeable for CountersUpgradeable.Counter;
 
@@ -21,8 +22,6 @@ contract Bazaar is Initializable, ERC1155Upgradeable, IERC2981Upgradeable {
     // emitted when item price is changed
     event Appraise(uint256 price, address erc20, uint256 indexed id);
 
-    // contract owner address
-    address public owner;
     // escrow contract
     Escrow public escrow;
     // mint fee basis points
@@ -51,8 +50,8 @@ contract Bazaar is Initializable, ERC1155Upgradeable, IERC2981Upgradeable {
 
         feeNumerator = _feeNumerator;
         escrow = _escrow;
-        owner = _msgSender();
 
+        __Ownable_init();
         __ERC1155_init("");
     }
 
@@ -65,7 +64,7 @@ contract Bazaar is Initializable, ERC1155Upgradeable, IERC2981Upgradeable {
     ///
     /// @return unique token id
     function list(uint256 config, uint256 limit, uint96 royalty, string calldata tokenURI) external returns (uint256) {
-        require(royalty <= FEE_DENOMINATOR, "fee will exceed sale price");
+        require(royalty <= FEE_DENOMINATOR, "royalty will exceed sale price");
         
         Listings.Listing memory listing = Listings.Listing({
             vendor: _msgSender(),
@@ -95,9 +94,9 @@ contract Bazaar is Initializable, ERC1155Upgradeable, IERC2981Upgradeable {
     /// @param erc20 currency address
     function mint(address to, uint256 id, uint256 amount, address erc20, bytes calldata data) external payable {
         Listings.Listing storage listing = _listings[id];
-        require(!listing.isPaused() || _msgSender() == listing.vendor, "minting is paused");
+        require(!listing.isPaused(), "minting is paused");
 
-        if (listing.isFree() || _msgSender() == listing.vendor) {
+        if (listing.isFree()) {
             return _mint(to, id, amount, data);
         }
 
@@ -109,10 +108,10 @@ contract Bazaar is Initializable, ERC1155Upgradeable, IERC2981Upgradeable {
         uint256 fee = (price * feeNumerator) / FEE_DENOMINATOR;
         if (erc20 == address(0)) {
             escrow.deposit{ value: price - fee }(_msgSender(), listing.vendor, erc20, price - fee);
-            escrow.deposit{ value: fee }(_msgSender(), owner, erc20, fee);
+            escrow.deposit{ value: fee }(_msgSender(), owner(), erc20, fee);
         } else {
             escrow.deposit(_msgSender(), listing.vendor, erc20, price - fee);
-            escrow.deposit(_msgSender(), owner, erc20, fee);
+            escrow.deposit(_msgSender(), owner(), erc20, fee);
         }
     }
 
@@ -142,7 +141,7 @@ contract Bazaar is Initializable, ERC1155Upgradeable, IERC2981Upgradeable {
     function configure(uint256 id, uint256 config, uint256 limit, uint96 royalty) external onlyVendor(id) {
         Listings.Listing storage listing = _listings[id];
 
-        require(royalty <= FEE_DENOMINATOR, "fee will exceed sale price");
+        require(royalty <= FEE_DENOMINATOR, "royalty will exceed sale price");
         require(limit == 0 || limit >= listing.supply, "limit lower than supply");
         
         listing.config = config;
@@ -229,23 +228,12 @@ contract Bazaar is Initializable, ERC1155Upgradeable, IERC2981Upgradeable {
     /// Overrides ///
     /////////////////
 
-    function uri(uint256 id) 
-        public 
-        view 
-        override 
-        returns (string memory) 
-    {
+    function uri(uint256 id) public view override returns (string memory) {
         return _listings[id].uri;
     }
 
-    function supportsInterface(bytes4 interfaceId) 
-        public 
-        view 
-        override(ERC1155Upgradeable, IERC165Upgradeable)
-        returns (bool) 
-    {
-        return interfaceId == type(IERC2981Upgradeable).interfaceId 
-            || super.supportsInterface(interfaceId);
+    function supportsInterface(bytes4 interfaceId) public view override(ERC1155Upgradeable, IERC165Upgradeable) returns (bool) {
+        return interfaceId == type(IERC2981Upgradeable).interfaceId || super.supportsInterface(interfaceId);
     }
 
     function _beforeTokenTransfer(
