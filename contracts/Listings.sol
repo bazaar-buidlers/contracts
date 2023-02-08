@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
+import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+
 library Listings {
     // config flag pauses minting
     uint256 constant CONFIG_PAUSED = 1 << 0;
@@ -20,6 +22,8 @@ library Listings {
         uint256 supply;
         // maximum supply limit
         uint256 limit;
+        // allow merkle root
+        uint256 allow;
         // royalty fee basis points
         uint96 royalty;
         // metadata uri
@@ -40,5 +44,10 @@ library Listings {
 
     function isUnique(Listing storage listing) internal view returns (bool) {
         return listing.config & CONFIG_UNIQUE != 0;
+    }
+
+    function isAllowed(Listing storage listing, address sender, bytes32[] calldata proof) internal view returns (bool) {
+        bytes32 leaf = keccak256(bytes.concat(keccak256(abi.encode(sender))));
+        return MerkleProof.verifyCalldata(proof, bytes32(listing.allow), leaf);
     }
 }

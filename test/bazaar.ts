@@ -1,4 +1,5 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
+import { StandardMerkleTree } from "@openzeppelin/merkle-tree";
 import { expect } from 'chai';
 import { BigNumber, constants } from 'ethers';
 import { ethers } from 'hardhat';
@@ -9,21 +10,22 @@ describe('Bazaar.list', function() {
     const { bazaar } = await loadFixture(deployBazaar);
     const [_, seller] = await ethers.getSigners();
 
-    await bazaar.connect(seller).list(1, 2, 3, "test");
+    await bazaar.connect(seller).list(1, 2, 3, 4, "test");
     
     const uri = await bazaar.uri(0);
     expect(uri).to.equal("test");
 
     const [vendor, royalty] = await bazaar.royaltyInfo(0, 10000);
     expect(vendor).to.equal(seller.address)
-    expect(royalty).to.equal(3);
+    expect(royalty).to.equal(4);
 
     const info = await bazaar.listingInfo(0);
     expect(info.vendor).to.equal(seller.address);
     expect(info.supply).to.equal(0);
     expect(info.config).to.equal(1);
     expect(info.limit).to.equal(2);
-    expect(info.royalty).to.equal(3);
+    expect(info.allow).to.equal(3);
+    expect(info.royalty).to.equal(4);
     expect(info.uri).to.equal("test");
   });
 
@@ -33,7 +35,7 @@ describe('Bazaar.list', function() {
     const feeDenominator = await bazaar.feeDenominator();
     const royalty = feeDenominator.add(1);
 
-    const tx = bazaar.list(0, 0, royalty, "test");
+    const tx = bazaar.list(0, 0, 0, royalty, "test");
     await expect(tx).to.be.revertedWith('royalty will exceed sale price');
   });
 });
@@ -46,7 +48,7 @@ describe('Bazaar.mint', function() {
     const erc20s = [constants.AddressZero];
     const prices = [BigNumber.from(1_000_000)];
 
-    await bazaar.connect(seller).list(0, 0, 0, "test");
+    await bazaar.connect(seller).list(0, 0, 0, 0, "test");
     await bazaar.connect(seller).appraise(0, erc20s, prices);
 
     const amount = 2;
@@ -76,7 +78,7 @@ describe('Bazaar.mint', function() {
     const erc20s = [token.address];
     const prices = [BigNumber.from(1_000_000)];
 
-    await bazaar.connect(seller).list(0, 0, 0, "test");
+    await bazaar.connect(seller).list(0, 0, 0, 0, "test");
     await bazaar.connect(seller).appraise(0, erc20s, prices);
 
     const amount = 2;
@@ -106,16 +108,43 @@ describe('Bazaar.mint', function() {
     const { bazaar } = await loadFixture(deployBazaar);
     const [_, seller, buyer] = await ethers.getSigners();
     
-    await bazaar.connect(seller).list(2, 0, 0, "test");
+    await bazaar.connect(seller).list(2, 0, 0, 0, "test");
     await bazaar.connect(buyer).mint(buyer.address, 0, 1, constants.AddressZero, []);
     expect(await bazaar.balanceOf(buyer.address, 0)).to.equal(1);
+  });
+
+  it('should work when allow list contains address', async function() {
+    const { bazaar } = await loadFixture(deployBazaar);
+    const [_, seller, buyer] = await ethers.getSigners();
+
+    const addresses = [[seller.address], [buyer.address]];
+    const tree = StandardMerkleTree.of(addresses, ["address"]);
+    const proof = tree.getProof([buyer.address]);
+    
+    await bazaar.connect(seller).list(2, 0, tree.root, 0, "test");
+    await bazaar.connect(buyer).mint(buyer.address, 0, 1, constants.AddressZero, proof);
+    expect(await bazaar.balanceOf(buyer.address, 0)).to.equal(1);
+  });
+
+  it('should revert when allow list proof does not match sender', async function() {
+    const { bazaar } = await loadFixture(deployBazaar);
+    const [_, seller, buyer] = await ethers.getSigners();
+
+    const addresses = [[seller.address]];
+    const tree = StandardMerkleTree.of(addresses, ["address"]);
+    const proof = tree.getProof([seller.address]);
+    
+    await bazaar.connect(seller).list(2, 0, tree.root, 0, "test");
+
+    const tx = bazaar.connect(buyer).mint(buyer.address, 0, 1, constants.AddressZero, proof);
+    await expect(tx).to.be.revertedWith('not allowed');
   });
 
   it('should revert when listing is paused', async function() {
     const { bazaar } = await loadFixture(deployBazaar);
     const [_, seller, buyer] = await ethers.getSigners();
     
-    await bazaar.connect(seller).list(1, 0, 0, "test");
+    await bazaar.connect(seller).list(1, 0, 0, 0, "test");
 
     const tx = bazaar.connect(buyer).mint(buyer.address, 0, 1, constants.AddressZero, []);
     await expect(tx).to.be.revertedWith('minting is paused');
@@ -125,7 +154,7 @@ describe('Bazaar.mint', function() {
     const { bazaar } = await loadFixture(deployBazaar);
     const [_, seller, buyer] = await ethers.getSigners();
     
-    await bazaar.connect(seller).list(0, 0, 0, "test");
+    await bazaar.connect(seller).list(0, 0, 0, 0, "test");
 
     const tx = bazaar.connect(buyer).mint(buyer.address, 0, 1, constants.AddressZero, []);
     await expect(tx).to.be.revertedWith('invalid currency or amount');
@@ -138,7 +167,7 @@ describe('Bazaar.mint', function() {
     const erc20s = [constants.AddressZero];
     const prices = [BigNumber.from(1_000_000)];
 
-    await bazaar.connect(seller).list(0, 1, 0, "test");
+    await bazaar.connect(seller).list(0, 1, 0, 0, "test");
     await bazaar.connect(seller).appraise(0, erc20s, prices);
 
     const tx = bazaar.connect(buyer).mint(buyer.address, 0, 2, erc20s[0], [], { value: prices[0].mul(2) });
@@ -152,7 +181,7 @@ describe('Bazaar.mint', function() {
     const erc20s = [constants.AddressZero];
     const prices = [BigNumber.from(1_000_000)];
 
-    await bazaar.connect(seller).list(8, 1, 0, "test");
+    await bazaar.connect(seller).list(8, 1, 0, 0, "test");
     await bazaar.connect(seller).appraise(0, erc20s, prices);
 
     await bazaar.mint(buyer.address, 0, 1, erc20s[0], [], { value: prices[0] });
@@ -171,7 +200,7 @@ describe('Bazaar.appraise', function() {
     const erc20s = [constants.AddressZero, token.address];
     const prices = [BigNumber.from(1_000_000), BigNumber.from(2_000_000)];
 
-    await bazaar.connect(seller).list(0, 0, 0, "test");
+    await bazaar.connect(seller).list(0, 0, 0, 0, "test");
     await bazaar.connect(seller).appraise(0, erc20s, prices);
 
     expect(await bazaar.priceInfo(0, erc20s[0])).to.equal(prices[0]);
@@ -185,7 +214,7 @@ describe('Bazaar.appraise', function() {
     const erc20s = [constants.AddressZero];
     const prices = [BigNumber.from(1_000_000)];
 
-    await bazaar.connect(seller).list(0, 0, 0, "test");
+    await bazaar.connect(seller).list(0, 0, 0, 0, "test");
 
     const tx = bazaar.connect(buyer).appraise(0, erc20s, prices);
     await expect(tx).to.be.revertedWith('sender is not vendor');
@@ -195,7 +224,7 @@ describe('Bazaar.appraise', function() {
     const { bazaar } = await loadFixture(deployBazaar);
     const [_, seller] = await ethers.getSigners();
 
-    await bazaar.connect(seller).list(0, 0, 0, "test");
+    await bazaar.connect(seller).list(0, 0, 0, 0, "test");
 
     const tx = bazaar.connect(seller).appraise(0, [constants.AddressZero], []);
     await expect(tx).to.be.revertedWith('mismatched erc20 and price');
@@ -207,22 +236,24 @@ describe('Bazaar.configure', function() {
     const { bazaar } = await loadFixture(deployBazaar);
     const [_, seller] = await ethers.getSigners();
 
-    await bazaar.connect(seller).list(0, 0, 0, "test");
-    await bazaar.connect(seller).configure(0, 1, 2, 3);
+    await bazaar.connect(seller).list(0, 0, 0, 0, "test");
+    await bazaar.connect(seller).configure(0, 1, 2, 3, 4);
 
     const info = await bazaar.listingInfo(0);
     expect(info.config).to.equal(1);
     expect(info.limit).to.equal(2);
-    expect(info.royalty).to.equal(3);
+    expect(info.allow).to.equal(3);
+    expect(info.royalty).to.equal(4);
+
   });
 
   it('should revert when sender is not vendor', async function() {
     const { bazaar } = await loadFixture(deployBazaar);
     const [_, seller, buyer] = await ethers.getSigners();
 
-    await bazaar.connect(seller).list(0, 0, 0, "test");
+    await bazaar.connect(seller).list(0, 0, 0, 0, "test");
 
-    const tx = bazaar.connect(buyer).configure(0, 1, 2, 3);
+    const tx = bazaar.connect(buyer).configure(0, 1, 2, 3, 4);
     await expect(tx).to.be.revertedWith('sender is not vendor');
   });
 
@@ -230,10 +261,10 @@ describe('Bazaar.configure', function() {
     const { bazaar } = await loadFixture(deployBazaar);
     const [_, seller, buyer] = await ethers.getSigners();
 
-    await bazaar.connect(seller).list(2, 0, 0, "test");
+    await bazaar.connect(seller).list(2, 0, 0, 0, "test");
     await bazaar.connect(buyer).mint(buyer.address, 0, 2, constants.AddressZero, []);
 
-    const tx = bazaar.connect(seller).configure(0, 2, 1, 0);
+    const tx = bazaar.connect(seller).configure(0, 2, 1, 0, 0);
     expect(tx).to.be.revertedWith('limit lower than supply');
   });
 
@@ -241,12 +272,12 @@ describe('Bazaar.configure', function() {
     const { bazaar } = await loadFixture(deployBazaar);
     const [_, seller] = await ethers.getSigners();
 
-    await bazaar.connect(seller).list(0, 0, 0, "test");
+    await bazaar.connect(seller).list(0, 0, 0, 0, "test");
 
     const feeDenominator = await bazaar.feeDenominator();
     const royalty = feeDenominator.add(1);
 
-    const tx = bazaar.connect(seller).configure(0, 0, 0, royalty);
+    const tx = bazaar.connect(seller).configure(0, 0, 0, 0, royalty);
     await expect(tx).to.be.revertedWith('royalty will exceed sale price');
   });
 });
@@ -256,7 +287,7 @@ describe('Bazaar.update', function() {
     const { bazaar } = await loadFixture(deployBazaar);
     const [_, seller] = await ethers.getSigners();
 
-    await bazaar.connect(seller).list(0, 0, 0, "test");
+    await bazaar.connect(seller).list(0, 0, 0, 0, "test");
     await bazaar.connect(seller).update(0, "different");
     
     const info = await bazaar.listingInfo(0);
@@ -268,7 +299,7 @@ describe('Bazaar.update', function() {
     const { bazaar } = await loadFixture(deployBazaar);
     const [_, seller, buyer] = await ethers.getSigners();
 
-    await bazaar.connect(seller).list(0, 0, 0, "test");
+    await bazaar.connect(seller).list(0, 0, 0, 0, "test");
     
     const tx = bazaar.connect(buyer).update(0, "two");
     await expect(tx).to.be.revertedWith('sender is not vendor');
@@ -280,7 +311,7 @@ describe('Bazaar.transferVendor', function() {
     const { bazaar } = await loadFixture(deployBazaar);
     const [_, seller, buyer] = await ethers.getSigners();
 
-    await bazaar.connect(seller).list(0, 0, 0, "test");
+    await bazaar.connect(seller).list(0, 0, 0, 0, "test");
     await bazaar.connect(seller).transferVendor(0, buyer.address);
     
     const info = await bazaar.listingInfo(0);
@@ -291,7 +322,7 @@ describe('Bazaar.transferVendor', function() {
     const { bazaar } = await loadFixture(deployBazaar);
     const [_, seller, buyer] = await ethers.getSigners();
 
-    await bazaar.connect(seller).list(0, 0, 0, "test");
+    await bazaar.connect(seller).list(0, 0, 0, 0, "test");
     
     const tx = bazaar.connect(buyer).transferVendor(0, buyer.address);
     await expect(tx).to.be.revertedWith('sender is not vendor');
@@ -306,7 +337,7 @@ describe('Bazaar.withdraw', function() {
     const erc20s = [constants.AddressZero];
     const prices = [BigNumber.from(1_000_000)];
 
-    await bazaar.connect(seller).list(0, 0, 0, "test");
+    await bazaar.connect(seller).list(0, 0, 0, 0, "test");
     await bazaar.connect(seller).appraise(0, erc20s, prices);
 
     const amount = 1;
@@ -335,7 +366,7 @@ describe('Bazaar.withdraw', function() {
     const erc20s = [token.address];
     const prices = [BigNumber.from(1_000_000)];
 
-    await bazaar.connect(seller).list(0, 0, 0, "test");
+    await bazaar.connect(seller).list(0, 0, 0, 0, "test");
     await bazaar.connect(seller).appraise(0, erc20s, prices);
 
     const amount = 1;

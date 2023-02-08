@@ -5,7 +5,6 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/interfaces/IERC2981Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
 
 import "./Escrow.sol";
@@ -13,12 +12,11 @@ import "./Listings.sol";
 
 contract Bazaar is Initializable, OwnableUpgradeable, ERC1155Upgradeable, IERC2981Upgradeable {
     using Listings for Listings.Listing;
-    using CountersUpgradeable for CountersUpgradeable.Counter;
 
     // emitted when vendor is changed
     event TransferVendor(address vendor, uint256 indexed id);
     // emitted when config is changed
-    event Configure(uint256 config, uint256 limit, uint96 royalty, uint256 indexed id);
+    event Configure(uint256 config, uint256 limit, uint256 allow, uint96 royalty, uint256 indexed id);
     // emitted when item price is changed
     event Appraise(uint256 price, address erc20, uint256 indexed id);
 
@@ -30,7 +28,7 @@ contract Bazaar is Initializable, OwnableUpgradeable, ERC1155Upgradeable, IERC29
     uint96 public constant feeDenominator = 10000;
     
     // product id counter
-    CountersUpgradeable.Counter private _counter;
+    uint256 private _counter;
     // mapping of token id to listing
     mapping(uint256 => Listings.Listing) private _listings;
     // mapping of token id to mapping of erc20 to price
@@ -59,11 +57,12 @@ contract Bazaar is Initializable, OwnableUpgradeable, ERC1155Upgradeable, IERC29
     ///
     /// @param config item config mask
     /// @param limit max mint limit
+    /// @param allow merkle root of allow list
     /// @param royalty numerator of royalty fee
     /// @param tokenURI token metadata URI
     ///
     /// @return unique token id
-    function list(uint256 config, uint256 limit, uint96 royalty, string calldata tokenURI) external returns (uint256) {
+    function list(uint256 config, uint256 limit, uint256 allow, uint96 royalty, string calldata tokenURI) external returns (uint256) {
         require(royalty <= feeDenominator, "royalty will exceed sale price");
         
         Listings.Listing memory listing = Listings.Listing({
@@ -71,16 +70,17 @@ contract Bazaar is Initializable, OwnableUpgradeable, ERC1155Upgradeable, IERC29
             config: config,
             supply: 0,
             limit: limit,
+            allow: allow,
             royalty: royalty,
             uri: tokenURI
         });
 
-        uint256 id = _counter.current();
+        uint256 id = _counter;
         _listings[id] = listing;
-        _counter.increment();
+        ++_counter;
 
         emit TransferVendor(listing.vendor, id);
-        emit Configure(listing.config, listing.limit, listing.royalty, id);
+        emit Configure(listing.config, listing.limit, listing.allow, listing.royalty, id);
         emit URI(listing.uri, id);
 
         return id;
@@ -92,26 +92,34 @@ contract Bazaar is Initializable, OwnableUpgradeable, ERC1155Upgradeable, IERC29
     /// @param id unique token id
     /// @param amount quantity to mint
     /// @param erc20 currency address
-    function mint(address to, uint256 id, uint256 amount, address erc20, bytes calldata data) external payable {
+    /// @param proof proof for allow list
+    function mint(address to, uint256 id, uint256 amount, address erc20, bytes32[] calldata proof) external payable {
         Listings.Listing storage listing = _listings[id];
         require(!listing.isPaused(), "minting is paused");
 
+        address owner = owner();
+        address sender = _msgSender();
+
+        if (listing.allow != 0) {
+            require(listing.isAllowed(sender, proof), "not allowed");
+        }
+
         if (listing.isFree()) {
-            return _mint(to, id, amount, data);
+            return _mint(to, id, amount, "");
         }
 
         uint256 price = _prices[id][erc20] * amount;
         require(price > 0, "invalid currency or amount");
 
-        _mint(to, id, amount, data);
+        _mint(to, id, amount, "");
 
         uint256 fee = (price * feeNumerator) / feeDenominator;
         if (erc20 == address(0)) {
-            escrow.deposit{ value: price - fee }(_msgSender(), listing.vendor, erc20, price - fee);
-            escrow.deposit{ value: fee }(_msgSender(), owner(), erc20, fee);
+            escrow.deposit{ value: price - fee }(sender, listing.vendor, erc20, price - fee);
+            escrow.deposit{ value: fee }(sender, owner, erc20, fee);
         } else {
-            escrow.deposit(_msgSender(), listing.vendor, erc20, price - fee);
-            escrow.deposit(_msgSender(), owner(), erc20, fee);
+            escrow.deposit(sender, listing.vendor, erc20, price - fee);
+            escrow.deposit(sender, owner, erc20, fee);
         }
     }
 
@@ -137,8 +145,9 @@ contract Bazaar is Initializable, OwnableUpgradeable, ERC1155Upgradeable, IERC29
     /// @param id unique token id
     /// @param config configuration mask
     /// @param limit max mint limit
+    /// @param allow merkle root of allow list
     /// @param royalty numerator of royalty fee
-    function configure(uint256 id, uint256 config, uint256 limit, uint96 royalty) external onlyVendor(id) {
+    function configure(uint256 id, uint256 config, uint256 limit, uint256 allow, uint96 royalty) external onlyVendor(id) {
         Listings.Listing storage listing = _listings[id];
 
         require(royalty <= feeDenominator, "royalty will exceed sale price");
@@ -146,9 +155,10 @@ contract Bazaar is Initializable, OwnableUpgradeable, ERC1155Upgradeable, IERC29
         
         listing.config = config;
         listing.limit = limit;
+        listing.allow = allow;
         listing.royalty = royalty;
         
-        emit Configure(config, limit, royalty, id);
+        emit Configure(config, limit, allow, royalty, id);
     }
 
     /// @dev Update the metadata URI of a listing.
@@ -194,9 +204,8 @@ contract Bazaar is Initializable, OwnableUpgradeable, ERC1155Upgradeable, IERC29
     ///
     /// @return recipient address and royalty amount
     function royaltyInfo(uint256 id, uint256 price) external view returns (address, uint256) {
-        Listings.Listing memory listing = _listings[id];
-        uint256 amount = (price * listing.royalty) / feeDenominator;
-        return (listing.vendor, amount);
+        uint256 amount = (price * _listings[id].royalty) / feeDenominator;
+        return (_listings[id].vendor, amount);
     }
 
     /// @dev Returns the price of an item in the specified currency.

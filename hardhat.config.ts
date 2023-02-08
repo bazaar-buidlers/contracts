@@ -2,6 +2,7 @@ import { HardhatUserConfig } from 'hardhat/config';
 import * as dotenv from 'dotenv'
 
 import 'hardhat-gas-reporter';
+import 'hardhat-contract-sizer';
 import '@nomicfoundation/hardhat-chai-matchers';
 import '@nomiclabs/hardhat-ethers';
 import '@openzeppelin/hardhat-upgrades';
@@ -23,6 +24,9 @@ const config: HardhatUserConfig = {
       enabled: true,
       runs: 1000,
     },
+  },
+  contractSizer: {
+    runOnCompile: true,
   },
   gasReporter: {
     currency: 'USD'

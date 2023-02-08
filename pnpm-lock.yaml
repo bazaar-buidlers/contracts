@@ -8,6 +8,7 @@ specifiers:
   '@openzeppelin/contracts': ^4.8.1
   '@openzeppelin/contracts-upgradeable': ^4.8.1
   '@openzeppelin/hardhat-upgrades': ^1.22.1
+  '@openzeppelin/merkle-tree': ^1.0.2
   '@typechain/ethers-v5': ^7.2.0
   '@typechain/hardhat': ^2.3.1
   '@types/chai': ^4.3.4
@@ -26,6 +27,7 @@ specifiers:
   eslint-plugin-promise: ^5.2.0
   ethers: ^5.7.2
   hardhat: ^2.12.5
+  hardhat-contract-sizer: ^2.8.0
   hardhat-gas-reporter: ^1.0.9
   prettier: ^2.8.1
   prettier-plugin-solidity: ^1.1.1
@@ -43,6 +45,7 @@ devDependencies:
   '@openzeppelin/contracts': 4.8.1
   '@openzeppelin/contracts-upgradeable': 4.8.1
   '@openzeppelin/hardhat-upgrades': 1.22.1_gxap3msybgqrozsety5vd6mh3y
+  '@openzeppelin/merkle-tree': 1.0.2
   '@typechain/ethers-v5': 7.2.0_asj7rnfsa5v2ckncrntdcrigy4
   '@typechain/hardhat': 2.3.1_cc7g5vspq4rygakntpvifl6ln4
   '@types/chai': 4.3.4
@@ -61,6 +64,7 @@ devDependencies:
   eslint-plugin-promise: 5.2.0_eslint@7.32.0
   ethers: 5.7.2
   hardhat: 2.12.6_z6wznmtyb6ovnulj6iujpct7um
+  hardhat-contract-sizer: 2.8.0_hardhat@2.12.6
   hardhat-gas-reporter: 1.0.9_hardhat@2.12.6
   prettier: 2.8.3
   prettier-plugin-solidity: 1.1.1_prettier@2.8.3
@@ -98,6 +102,13 @@ packages:
       chalk: 2.4.2
       js-tokens: 4.0.0
     dev: true
+
+  /@colors/colors/1.5.0:
+    resolution: {integrity: sha512-ooWCrlZP11i8GImSjTHYHLkvFDP48nS4+204nGb1RiX/WXYHmJA2III9/e2DWVabCESdW7hBAEzHRqUn9OUVvQ==}
+    engines: {node: '>=0.1.90'}
+    requiresBuild: true
+    dev: true
+    optional: true
 
   /@cspotcode/source-map-support/0.8.1:
     resolution: {integrity: sha512-IchNf6dN4tHoMFIn/7OE8LWZ19Y6q/67Bmf6vnGREv8RSbBVb9LPJxEcnwrcwX6ixSvaiGoomAUvu4YSxXrVgw==}
@@ -872,6 +883,13 @@ packages:
       proper-lockfile: 4.1.2
     transitivePeerDependencies:
       - supports-color
+    dev: true
+
+  /@openzeppelin/merkle-tree/1.0.2:
+    resolution: {integrity: sha512-qD+HmLTTEy9Nwgh0Amr6Rzhfq6yMC5rV43aMnxKtFh6PhZUUiiZRXFjpausNc6sxqrCi82/mGlz5xi5M1WfUrQ==}
+    dependencies:
+      '@ethersproject/abi': 5.7.0
+      ethereum-cryptography: 1.1.2
     dev: true
 
   /@openzeppelin/upgrades-core/1.21.0:
@@ -2156,6 +2174,15 @@ packages:
       string-width: 2.1.1
     optionalDependencies:
       colors: 1.4.0
+    dev: true
+
+  /cli-table3/0.6.3:
+    resolution: {integrity: sha512-w5Jac5SykAeZJKntOxJCrm63Eg5/4dhMWIcuTbo9rpE+brgaSZo0RuNJZeOyMgsUdhDeojvgyQLmjI+K50ZGyg==}
+    engines: {node: 10.* || >= 12.*}
+    dependencies:
+      string-width: 4.2.3
+    optionalDependencies:
+      '@colors/colors': 1.5.0
     dev: true
 
   /cli-width/2.2.1:
@@ -4021,6 +4048,17 @@ packages:
     dependencies:
       ajv: 6.12.6
       har-schema: 2.0.0
+    dev: true
+
+  /hardhat-contract-sizer/2.8.0_hardhat@2.12.6:
+    resolution: {integrity: sha512-jXt2Si3uIDx5z99J+gvKa0yvIw156pE4dpH9X/PvTQv652BUd+qGj7WT93PXnHXGh5qhQLkjDYeZMYNOThfjFg==}
+    peerDependencies:
+      hardhat: ^2.0.0
+    dependencies:
+      chalk: 4.1.2
+      cli-table3: 0.6.3
+      hardhat: 2.12.6_z6wznmtyb6ovnulj6iujpct7um
+      strip-ansi: 6.0.1
     dev: true
 
   /hardhat-gas-reporter/1.0.9_hardhat@2.12.6:
