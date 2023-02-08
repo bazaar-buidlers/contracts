@@ -1,20 +1,20 @@
 {
   "manifestVersion": "3.2",
   "admin": {
-    "address": "0x797014513Cf500a92357935d868B36CDcCaD020e",
-    "txHash": "0x079992cab46dc2f84fa4736fedc71ea5fed695f046686d7e27a08753f2d26c16"
+    "address": "0xa8F7CF7a177EBfcd17C9a1E6b38297756cC4fd9A",
+    "txHash": "0xe2fa3d01c84edcd44585029ccb8a9c4a28f5c40d931f76019da677b059ce6185"
   },
   "proxies": [
     {
-      "address": "0x76d8b9e38D9BAa56aB62fd832ECf0eEd79d7e7E9",
-      "txHash": "0xe621399070f57ddf75be8b0f54a275f9a15d16577d3e16050010ad736900bfdc",
+      "address": "0xff2DfB52C63417CD1f5bAB91b2eFa8Cd50537A81",
+      "txHash": "0x0816028165b94925fd1b77d8c39987da1099fd554badb31b5b7c6fce1361412c",
       "kind": "transparent"
     }
   ],
   "impls": {
-    "68b9da4f0d1466109718e194aa78292a527da7cc01234019e1fc1e219311017f": {
-      "address": "0xaaE2F135eE30C6D7F5f25cbA468D9c9fFb4ACd52",
-      "txHash": "0x6a03fe99b844ee6be7a45c78b2133d158850040979be3a7fd94d5361ee3df57a",
+    "86d70a654dab4ce1bb15bf058add2da458e73d186f2eb4681a413641515f6016": {
+      "address": "0x328119024D178C13468fb3Bb5CeCe3F65705172f",
+      "txHash": "0x3a7e6ba74c992f790d3508f9de0b2ac0387bb689b628470b103e6363e2a4040e",
       "layout": {
         "solcVersion": "0.8.17",
         "storage": [
@@ -44,9 +44,25 @@
             "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:36"
           },
           {
-            "label": "__gap",
+            "label": "_owner",
             "offset": 0,
             "slot": "51",
+            "type": "t_address",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:22"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "52",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:94"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "101",
             "type": "t_array(t_uint256)50_storage",
             "contract": "ERC165Upgradeable",
             "src": "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol:41"
@@ -54,7 +70,7 @@
           {
             "label": "_balances",
             "offset": 0,
-            "slot": "101",
+            "slot": "151",
             "type": "t_mapping(t_uint256,t_mapping(t_address,t_uint256))",
             "contract": "ERC1155Upgradeable",
             "src": "@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155Upgradeable.sol:25"
@@ -62,7 +78,7 @@
           {
             "label": "_operatorApprovals",
             "offset": 0,
-            "slot": "102",
+            "slot": "152",
             "type": "t_mapping(t_address,t_mapping(t_address,t_bool))",
             "contract": "ERC1155Upgradeable",
             "src": "@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155Upgradeable.sol:28"
@@ -70,7 +86,7 @@
           {
             "label": "_uri",
             "offset": 0,
-            "slot": "103",
+            "slot": "153",
             "type": "t_string_storage",
             "contract": "ERC1155Upgradeable",
             "src": "@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155Upgradeable.sol:31"
@@ -78,58 +94,50 @@
           {
             "label": "__gap",
             "offset": 0,
-            "slot": "104",
+            "slot": "154",
             "type": "t_array(t_uint256)47_storage",
             "contract": "ERC1155Upgradeable",
             "src": "@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155Upgradeable.sol:528"
           },
           {
-            "label": "owner",
-            "offset": 0,
-            "slot": "151",
-            "type": "t_address",
-            "contract": "Bazaar",
-            "src": "contracts/Bazaar.sol:25"
-          },
-          {
             "label": "escrow",
             "offset": 0,
-            "slot": "152",
-            "type": "t_contract(Escrow)3569",
+            "slot": "201",
+            "type": "t_contract(Escrow)4177",
             "contract": "Bazaar",
-            "src": "contracts/Bazaar.sol:27"
+            "src": "contracts/Bazaar.sol:24"
           },
           {
             "label": "feeNumerator",
             "offset": 20,
-            "slot": "152",
+            "slot": "201",
             "type": "t_uint96",
             "contract": "Bazaar",
-            "src": "contracts/Bazaar.sol:29"
+            "src": "contracts/Bazaar.sol:26"
           },
           {
             "label": "_counter",
             "offset": 0,
-            "slot": "153",
-            "type": "t_struct(Counter)1942_storage",
+            "slot": "202",
+            "type": "t_uint256",
             "contract": "Bazaar",
-            "src": "contracts/Bazaar.sol:34"
+            "src": "contracts/Bazaar.sol:31"
           },
           {
             "label": "_listings",
             "offset": 0,
-            "slot": "154",
-            "type": "t_mapping(t_uint256,t_struct(Listing)3604_storage)",
+            "slot": "203",
+            "type": "t_mapping(t_uint256,t_struct(Listing)4215_storage)",
             "contract": "Bazaar",
-            "src": "contracts/Bazaar.sol:36"
+            "src": "contracts/Bazaar.sol:33"
           },
           {
             "label": "_prices",
             "offset": 0,
-            "slot": "155",
+            "slot": "204",
             "type": "t_mapping(t_uint256,t_mapping(t_address,t_uint256))",
             "contract": "Bazaar",
-            "src": "contracts/Bazaar.sol:38"
+            "src": "contracts/Bazaar.sol:35"
           }
         ],
         "types": {
@@ -141,6 +149,10 @@
             "label": "uint256[47]",
             "numberOfBytes": "1504"
           },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]",
+            "numberOfBytes": "1568"
+          },
           "t_array(t_uint256)50_storage": {
             "label": "uint256[50]",
             "numberOfBytes": "1600"
@@ -149,7 +161,7 @@
             "label": "bool",
             "numberOfBytes": "1"
           },
-          "t_contract(Escrow)3569": {
+          "t_contract(Escrow)4177": {
             "label": "contract Escrow",
             "numberOfBytes": "20"
           },
@@ -169,7 +181,7 @@
             "label": "mapping(uint256 => mapping(address => uint256))",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_uint256,t_struct(Listing)3604_storage)": {
+          "t_mapping(t_uint256,t_struct(Listing)4215_storage)": {
             "label": "mapping(uint256 => struct Listings.Listing)",
             "numberOfBytes": "32"
           },
@@ -177,19 +189,7 @@
             "label": "string",
             "numberOfBytes": "32"
           },
-          "t_struct(Counter)1942_storage": {
-            "label": "struct CountersUpgradeable.Counter",
-            "members": [
-              {
-                "label": "_value",
-                "type": "t_uint256",
-                "offset": 0,
-                "slot": "0"
-              }
-            ],
-            "numberOfBytes": "32"
-          },
-          "t_struct(Listing)3604_storage": {
+          "t_struct(Listing)4215_storage": {
             "label": "struct Listings.Listing",
             "members": [
               {
@@ -217,19 +217,25 @@
                 "slot": "3"
               },
               {
+                "label": "allow",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "4"
+              },
+              {
                 "label": "royalty",
                 "type": "t_uint96",
                 "offset": 0,
-                "slot": "4"
+                "slot": "5"
               },
               {
                 "label": "uri",
                 "type": "t_string_storage",
                 "offset": 0,
-                "slot": "5"
+                "slot": "6"
               }
             ],
-            "numberOfBytes": "192"
+            "numberOfBytes": "224"
           },
           "t_uint256": {
             "label": "uint256",

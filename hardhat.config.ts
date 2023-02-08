@@ -5,6 +5,7 @@ import 'hardhat-gas-reporter';
 import 'hardhat-contract-sizer';
 import '@nomicfoundation/hardhat-chai-matchers';
 import '@nomiclabs/hardhat-ethers';
+import '@nomiclabs/hardhat-etherscan';
 import '@openzeppelin/hardhat-upgrades';
 
 dotenv.config();
@@ -19,17 +20,17 @@ const networkConfig = (name: string) => ({
 
 const config: HardhatUserConfig = {
   solidity: '0.8.17',
-  settings: {
-    optimizer: {
-      enabled: true,
-      runs: 1000,
-    },
-  },
   contractSizer: {
     runOnCompile: true,
   },
   gasReporter: {
     currency: 'USD'
+  },
+  etherscan: {
+    apiKey: {
+      arbitrumGoerli: process.env.ARBISCAN_API_KEY as string,
+      arbitrumOne: process.env.ARBISCAN_API_KEY as string,
+    },
   },
   networks: {
     'arbitrum': networkConfig('arbitrum'),
