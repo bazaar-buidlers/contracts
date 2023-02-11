@@ -16,11 +16,11 @@ contract Escrow is Ownable {
     // mapping of address to mapping of erc20 to deposits
     mapping(address => mapping(address => uint256)) private _deposits;
 
-    /// @dev Deposit funds.
+    /// @dev Deposit funds to the given address.
     ///
     /// @param from spender address
     /// @param to recipient address
-    /// @param erc20 currency address
+    /// @param erc20 currency address (zero address is native tokens)
     /// @param amount value to deposit
     function deposit(address from, address to, address erc20, uint256 amount) external payable onlyOwner {
         require(amount > 0, "nothing to deposit");
@@ -36,11 +36,11 @@ contract Escrow is Ownable {
         }
     }
 
-    /// @dev Withdraw funds.
+    /// @dev Withdraw funds to the given address.
     ///
     /// @param from spender address
     /// @param to recipient address
-    /// @param erc20 currency address
+    /// @param erc20 currency address (zero address is native tokens)
     function withdraw(address from, address payable to, address erc20) external onlyOwner {
         uint256 amount = _deposits[from][erc20];
         require(amount > 0, "nothing to withdraw");
@@ -60,8 +60,6 @@ contract Escrow is Ownable {
     ///
     /// @param payee address to return balance of
     /// @param erc20 currency address
-    ///
-    /// @return total deposits
     function depositsOf(address payee, address erc20) external view onlyOwner returns (uint256) {
         return _deposits[payee][erc20];
     }

@@ -55,13 +55,11 @@ contract Bazaar is Initializable, OwnableUpgradeable, ERC1155Upgradeable, IERC29
 
     /// @dev List a new item.
     ///
-    /// @param config item config mask
-    /// @param limit max mint limit
-    /// @param allow merkle root of allow list
+    /// @param config item configuration mask
+    /// @param limit maximum supply limit
+    /// @param allow root of allow merkle tree
     /// @param royalty numerator of royalty fee
     /// @param tokenURI token metadata URI
-    ///
-    /// @return unique token id
     function list(uint256 config, uint256 limit, uint256 allow, uint96 royalty, string calldata tokenURI) external returns (uint256) {
         require(royalty <= feeDenominator, "royalty will exceed sale price");
         
@@ -86,13 +84,13 @@ contract Bazaar is Initializable, OwnableUpgradeable, ERC1155Upgradeable, IERC29
         return id;
     }
 
-    /// @dev Mint a token.
+    /// @dev Mint tokens in the given currency.
     ///
     /// @param to recipient address
     /// @param id unique token id
     /// @param amount quantity to mint
-    /// @param erc20 currency address
-    /// @param proof proof for allow list
+    /// @param erc20 currency address (zero address is native tokens)
+    /// @param proof proof for allow merkle tree
     function mint(address to, uint256 id, uint256 amount, address erc20, bytes32[] calldata proof) external payable {
         Listings.Listing storage listing = _listings[id];
         require(!listing.isPaused(), "minting is paused");
@@ -103,21 +101,22 @@ contract Bazaar is Initializable, OwnableUpgradeable, ERC1155Upgradeable, IERC29
         if (listing.allow != 0) {
             require(listing.isAllowed(sender, proof), "not allowed");
         }
-
         if (listing.isFree()) {
             return _mint(to, id, amount, "");
         }
 
         uint256 price = _prices[id][erc20] * amount;
         require(price > 0, "invalid currency or amount");
-
         _mint(to, id, amount, "");
 
+        // fee goes to owner and remainder goes to vendor
         uint256 fee = (price * feeNumerator) / feeDenominator;
         if (erc20 == address(0)) {
+            // native token deposit
             escrow.deposit{ value: price - fee }(sender, listing.vendor, erc20, price - fee);
             escrow.deposit{ value: fee }(sender, owner, erc20, fee);
         } else {
+            // erc20 token deposit
             escrow.deposit(sender, listing.vendor, erc20, price - fee);
             escrow.deposit(sender, owner, erc20, fee);
         }
@@ -126,7 +125,7 @@ contract Bazaar is Initializable, OwnableUpgradeable, ERC1155Upgradeable, IERC29
     /// @dev Update pricing of an item.
     ///
     /// @param id unique token id
-    /// @param erc20s list of currencies
+    /// @param erc20s list of currencies (zero address is native tokens)
     /// @param prices list of prices
     function appraise(uint256 id, address[] calldata erc20s, uint256[] calldata prices) external onlyVendor(id) {
         require(erc20s.length == prices.length, "mismatched erc20 and price");
@@ -144,8 +143,8 @@ contract Bazaar is Initializable, OwnableUpgradeable, ERC1155Upgradeable, IERC29
     ///
     /// @param id unique token id
     /// @param config configuration mask
-    /// @param limit max mint limit
-    /// @param allow merkle root of allow list
+    /// @param limit maximum supply limit
+    /// @param allow root of allow merkle tree
     /// @param royalty numerator of royalty fee
     function configure(uint256 id, uint256 config, uint256 limit, uint256 allow, uint96 royalty) external onlyVendor(id) {
         Listings.Listing storage listing = _listings[id];
@@ -191,8 +190,6 @@ contract Bazaar is Initializable, OwnableUpgradeable, ERC1155Upgradeable, IERC29
     ///
     /// @param payee address to return balance of
     /// @param erc20 currency address
-    ///
-    /// @return total deposits
     function depositsOf(address payee, address erc20) external view returns (uint256) {
         return escrow.depositsOf(payee, erc20);
     }
@@ -201,8 +198,6 @@ contract Bazaar is Initializable, OwnableUpgradeable, ERC1155Upgradeable, IERC29
     ///
     /// @param id unique token id
     /// @param price sale price of item
-    ///
-    /// @return recipient address and royalty amount
     function royaltyInfo(uint256 id, uint256 price) external view returns (address, uint256) {
         uint256 amount = (price * _listings[id].royalty) / feeDenominator;
         return (_listings[id].vendor, amount);
@@ -212,8 +207,6 @@ contract Bazaar is Initializable, OwnableUpgradeable, ERC1155Upgradeable, IERC29
     ///
     /// @param id unique token id
     /// @param erc20 currency address
-    ///
-    /// @return price of the listing in the specified currency
     function priceInfo(uint256 id, address erc20) external view returns (uint256) {
         return _prices[id][erc20];
     }
@@ -221,8 +214,6 @@ contract Bazaar is Initializable, OwnableUpgradeable, ERC1155Upgradeable, IERC29
     /// @dev Returns listing info.
     ///
     /// @param id unique token id
-    ///
-    /// @return listing config,
     function listingInfo(uint256 id) external view returns (Listings.Listing memory) {
         return _listings[id];
     }
