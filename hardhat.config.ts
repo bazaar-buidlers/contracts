@@ -1,12 +1,12 @@
-import { HardhatUserConfig } from 'hardhat/config';
-import * as dotenv from 'dotenv'
-
-import 'hardhat-gas-reporter';
-import 'hardhat-contract-sizer';
 import '@nomicfoundation/hardhat-chai-matchers';
 import '@nomiclabs/hardhat-ethers';
 import '@nomiclabs/hardhat-etherscan';
 import '@openzeppelin/hardhat-upgrades';
+import { HardhatUserConfig } from 'hardhat/config';
+import 'hardhat-gas-reporter';
+import 'hardhat-contract-sizer';
+import 'solidity-coverage';
+import * as dotenv from 'dotenv'
 
 dotenv.config();
 
@@ -19,7 +19,15 @@ const networkConfig = (name: string) => ({
 });
 
 const config: HardhatUserConfig = {
-  solidity: '0.8.17',
+  solidity: {
+    version: '0.8.17',
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 1000,
+      },
+    },
+  },
   contractSizer: {
     runOnCompile: true,
   },
