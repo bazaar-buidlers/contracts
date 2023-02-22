@@ -95,7 +95,7 @@ contract Bazaar is Initializable, OwnableUpgradeable, ERC1155Upgradeable, IERC29
         Listings.Listing storage listing = _listings[id];
         require(!listing.isPaused(), "minting is paused");
 
-        address owner = owner();
+        address _owner = owner();
         address sender = _msgSender();
 
         if (listing.allow != 0) {
@@ -114,11 +114,11 @@ contract Bazaar is Initializable, OwnableUpgradeable, ERC1155Upgradeable, IERC29
         if (erc20 == address(0)) {
             // native token deposit
             escrow.deposit{ value: price - fee }(sender, listing.vendor, erc20, price - fee);
-            escrow.deposit{ value: fee }(sender, owner, erc20, fee);
+            escrow.deposit{ value: fee }(sender, _owner, erc20, fee);
         } else {
             // erc20 token deposit
             escrow.deposit(sender, listing.vendor, erc20, price - fee);
-            escrow.deposit(sender, owner, erc20, fee);
+            escrow.deposit(sender, _owner, erc20, fee);
         }
     }
 
