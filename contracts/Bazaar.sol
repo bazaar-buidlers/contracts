@@ -102,6 +102,7 @@ contract Bazaar is Initializable, OwnableUpgradeable, ERC1155Upgradeable, IERC29
             require(listing.isAllowed(sender, proof), "not allowed");
         }
         if (listing.isFree()) {
+            require(msg.value == 0, "mint is free");
             return _mint(to, id, amount, "");
         }
 
@@ -113,6 +114,7 @@ contract Bazaar is Initializable, OwnableUpgradeable, ERC1155Upgradeable, IERC29
         uint256 fee = (price * feeNumerator) / feeDenominator;
         if (erc20 == address(0)) {
             // native token deposit
+            require(msg.value == price, "incorrect amount of native tokens sent");
             escrow.deposit{ value: price - fee }(sender, listing.vendor, erc20, price - fee);
             escrow.deposit{ value: fee }(sender, owner, erc20, fee);
         } else {
