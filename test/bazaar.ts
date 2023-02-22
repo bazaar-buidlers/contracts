@@ -5,6 +5,11 @@ import { BigNumber, constants } from 'ethers';
 import { ethers } from 'hardhat';
 import { deployBazaar } from './fixtures';
 
+const CONFIG_PAUSED = 1 << 0;
+const CONFIG_FREE = 1 << 1;
+const CONFIG_SOULBOUND = 1 << 2;
+const CONFIG_UNIQUE = 1 << 3;
+
 describe('Bazaar.list', function() {
   it('should setup listing', async function() {
     const { bazaar } = await loadFixture(deployBazaar);
@@ -108,7 +113,7 @@ describe('Bazaar.mint', function() {
     const { bazaar } = await loadFixture(deployBazaar);
     const [_, seller, buyer] = await ethers.getSigners();
     
-    await bazaar.connect(seller).list(2, 0, 0, 0, "test");
+    await bazaar.connect(seller).list(CONFIG_FREE, 0, 0, 0, "test");
     await bazaar.connect(buyer).mint(buyer.address, 0, 1, constants.AddressZero, []);
     expect(await bazaar.balanceOf(buyer.address, 0)).to.equal(1);
   });
@@ -121,7 +126,7 @@ describe('Bazaar.mint', function() {
     const tree = StandardMerkleTree.of(addresses, ["address"]);
     const proof = tree.getProof([buyer.address]);
     
-    await bazaar.connect(seller).list(2, 0, tree.root, 0, "test");
+    await bazaar.connect(seller).list(CONFIG_FREE, 0, tree.root, 0, "test");
     await bazaar.connect(buyer).mint(buyer.address, 0, 1, constants.AddressZero, proof);
     expect(await bazaar.balanceOf(buyer.address, 0)).to.equal(1);
   });
@@ -134,7 +139,7 @@ describe('Bazaar.mint', function() {
     const tree = StandardMerkleTree.of(addresses, ["address"]);
     const proof = tree.getProof([seller.address]);
     
-    await bazaar.connect(seller).list(2, 0, tree.root, 0, "test");
+    await bazaar.connect(seller).list(CONFIG_FREE, 0, tree.root, 0, "test");
 
     const tx = bazaar.connect(buyer).mint(buyer.address, 0, 1, constants.AddressZero, proof);
     await expect(tx).to.be.revertedWith('not allowed');
@@ -144,7 +149,7 @@ describe('Bazaar.mint', function() {
     const { bazaar } = await loadFixture(deployBazaar);
     const [_, seller, buyer] = await ethers.getSigners();
     
-    await bazaar.connect(seller).list(1, 0, 0, 0, "test");
+    await bazaar.connect(seller).list(CONFIG_PAUSED, 0, 0, 0, "test");
 
     const tx = bazaar.connect(buyer).mint(buyer.address, 0, 1, constants.AddressZero, []);
     await expect(tx).to.be.revertedWith('minting is paused');
@@ -181,7 +186,7 @@ describe('Bazaar.mint', function() {
     const erc20s = [constants.AddressZero];
     const prices = [BigNumber.from(1_000_000)];
 
-    await bazaar.connect(seller).list(8, 1, 0, 0, "test");
+    await bazaar.connect(seller).list(CONFIG_UNIQUE, 1, 0, 0, "test");
     await bazaar.connect(seller).appraise(0, erc20s, prices);
 
     await bazaar.mint(buyer.address, 0, 1, erc20s[0], [], { value: prices[0] });
@@ -261,10 +266,10 @@ describe('Bazaar.configure', function() {
     const { bazaar } = await loadFixture(deployBazaar);
     const [_, seller, buyer] = await ethers.getSigners();
 
-    await bazaar.connect(seller).list(2, 0, 0, 0, "test");
+    await bazaar.connect(seller).list(CONFIG_FREE, 0, 0, 0, "test");
     await bazaar.connect(buyer).mint(buyer.address, 0, 2, constants.AddressZero, []);
 
-    const tx = bazaar.connect(seller).configure(0, 2, 1, 0, 0);
+    const tx = bazaar.connect(seller).configure(0, CONFIG_FREE, 1, 0, 0);
     expect(tx).to.be.revertedWith('limit lower than supply');
   });
 
@@ -279,6 +284,22 @@ describe('Bazaar.configure', function() {
 
     const tx = bazaar.connect(seller).configure(0, 0, 0, 0, royalty);
     await expect(tx).to.be.revertedWith('royalty will exceed sale price');
+  });
+
+  it('should revert when locked', async function() {
+    const { bazaar } = await loadFixture(deployBazaar);
+    const [_, seller, buyer] = await ethers.getSigners();
+
+    await bazaar.connect(seller).list(CONFIG_FREE | CONFIG_SOULBOUND, 0, 0, 0, "test");
+    await bazaar.connect(buyer).mint(buyer.address, 0, 1, constants.AddressZero, []);
+
+    // attempt to disable soulbound
+    const tx1 = bazaar.connect(seller).configure(0, CONFIG_FREE, 0, 0, 0);
+    await expect(tx1).to.be.revertedWith('config is locked');
+
+    // attempt to enable unique
+    const tx2 = bazaar.connect(seller).configure(0, CONFIG_FREE | CONFIG_SOULBOUND | CONFIG_UNIQUE, 0, 0, 0);
+    await expect(tx2).to.be.revertedWith('config is locked');
   });
 });
 

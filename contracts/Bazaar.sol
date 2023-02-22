@@ -151,7 +151,8 @@ contract Bazaar is Initializable, OwnableUpgradeable, ERC1155Upgradeable, IERC29
 
         require(royalty <= feeDenominator, "royalty will exceed sale price");
         require(limit == 0 || limit >= listing.supply, "limit lower than supply");
-        
+        require(listing.supply == 0 || listing.isUnlocked(config), "config is locked");
+
         listing.config = config;
         listing.limit = limit;
         listing.allow = allow;
