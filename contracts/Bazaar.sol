@@ -178,14 +178,6 @@ contract Bazaar is Initializable, OwnableUpgradeable, ERC1155Upgradeable, IERC29
         emit TransferVendor(vendor, id);
     }
 
-    /// @dev Withdraw deposits.
-    ///
-    /// @param payee address to send funds
-    /// @param erc20 currency address
-    function withdraw(address payable payee, address erc20) external {
-        escrow.withdraw(_msgSender(), payee, erc20);
-    }
-
     /// @dev Returns the total deposits for an address.
     ///
     /// @param payee address to return balance of
