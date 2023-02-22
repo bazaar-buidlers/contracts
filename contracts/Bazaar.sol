@@ -86,12 +86,11 @@ contract Bazaar is Initializable, OwnableUpgradeable, ERC1155Upgradeable, IERC29
 
     /// @dev Mint tokens in the given currency.
     ///
-    /// @param to recipient address
     /// @param id unique token id
-    /// @param amount quantity to mint
+    /// @param to recipient address
     /// @param erc20 currency address (zero address is native tokens)
     /// @param proof proof for allow merkle tree
-    function mint(address to, uint256 id, uint256 amount, address erc20, bytes32[] calldata proof) external payable {
+    function mint(uint256 id, address to, address erc20, bytes32[] calldata proof) external payable {
         Listings.Listing storage listing = _listings[id];
         require(!listing.isPaused(), "minting is paused");
 
@@ -102,12 +101,12 @@ contract Bazaar is Initializable, OwnableUpgradeable, ERC1155Upgradeable, IERC29
             require(listing.isAllowed(sender, proof), "not allowed");
         }
         if (listing.isFree()) {
-            return _mint(to, id, amount, "");
+            return _mint(to, id, 1, "");
         }
 
-        uint256 price = _prices[id][erc20] * amount;
-        require(price > 0, "invalid currency or amount");
-        _mint(to, id, amount, "");
+        uint256 price = _prices[id][erc20];
+        require(price > 0, "invalid currency");
+        _mint(to, id, 1, "");
 
         // fee goes to owner and remainder goes to vendor
         uint256 fee = (price * feeNumerator) / feeDenominator;
