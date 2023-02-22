@@ -3,6 +3,7 @@ pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
 contract Escrow is Ownable {
@@ -32,7 +33,7 @@ contract Escrow is Ownable {
         if (erc20 == address(0)) {
             require(msg.value == amount, "value must equal amount");
         } else {
-            require(IERC20(erc20).transferFrom(from, address(this), amount), "transfer failed");
+            SafeERC20.safeTransferFrom(IERC20(erc20), from, address(this), amount);
         }
     }
 
@@ -52,7 +53,7 @@ contract Escrow is Ownable {
         if (erc20 == address(0)) {
             to.sendValue(amount);
         } else {
-            require(IERC20(erc20).transfer(to, amount), "transfer failed");
+            SafeERC20.safeTransfer(IERC20(erc20), to, amount);
         }
     }
 
