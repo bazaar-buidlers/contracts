@@ -16,8 +16,6 @@ library Listings {
     uint256 constant CONFIG_LOCK_MASK = CONFIG_SOULBOUND | CONFIG_UNIQUE;
     
     struct Listing {
-        // vendor address
-        address vendor;
         // configuration mask
         uint256 config;
         // total number of mints
@@ -26,6 +24,8 @@ library Listings {
         uint256 limit;
         // allow merkle tree root
         uint256 allow;
+        // vendor address
+        address vendor;
         // royalty fee basis points
         uint96 royalty;
         // metadata uri
