@@ -79,7 +79,7 @@ describe('Escrow.withdraw', function() {
     expect(await escrow.depositsOf(to.address, erc20)).to.equal(value);
 
     const beforeBalance = await holding.getBalance();
-    await escrow.withdraw(to.address, holding.address, erc20);
+    await escrow.connect(to).withdraw(holding.address, erc20);
     expect(await escrow.depositsOf(to.address, erc20)).to.equal(0);
 
     const afterBalance = await holding.getBalance();
@@ -100,7 +100,7 @@ describe('Escrow.withdraw', function() {
     expect(await escrow.depositsOf(to.address, erc20)).to.equal(value);
 
     const beforeBalance = await token.balanceOf(holding.address);
-    await escrow.withdraw(to.address, holding.address, erc20);
+    await escrow.connect(to).withdraw(holding.address, erc20);
     expect(await escrow.depositsOf(to.address, erc20)).to.equal(0);
 
     const afterBalance = await token.balanceOf(holding.address);
@@ -111,15 +111,7 @@ describe('Escrow.withdraw', function() {
     const { escrow } = await loadFixture(deployEscrow);
     const [_, from, to] = await ethers.getSigners();
 
-    const tx = escrow.withdraw(from.address, to.address, constants.AddressZero);
+    const tx = escrow.connect(from).withdraw(to.address, constants.AddressZero);
     await expect(tx).to.be.revertedWith('nothing to withdraw');
-  });
-
-  it('should revert when sender is not owner', async function() {
-    const { escrow } = await loadFixture(deployEscrow);
-    const [_, from, to, sender] = await ethers.getSigners();
-
-    const tx = escrow.connect(sender).withdraw(from.address, to.address, constants.AddressZero);
-    await expect(tx).to.be.revertedWith('Ownable: caller is not the owner');
   });
 });
