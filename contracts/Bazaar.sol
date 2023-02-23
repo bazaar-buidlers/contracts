@@ -25,7 +25,7 @@ contract Bazaar is Initializable, OwnableUpgradeable, ERC1155Upgradeable, IERC29
     // mint fee basis points
     uint96 public feeNumerator;
     // mint fee / royalty denominator
-    uint96 public constant feeDenominator = 10000;
+    uint96 public constant FEE_DENOMINATOR = 10000;
     
     // product id counter
     uint256 private _counter;
@@ -44,7 +44,7 @@ contract Bazaar is Initializable, OwnableUpgradeable, ERC1155Upgradeable, IERC29
     /// @param _feeNumerator numerator of protocol fee
     /// @param _escrow Escrow contract address
     function initialize(uint96 _feeNumerator, Escrow _escrow) public initializer {
-        require(_feeNumerator <= feeDenominator, "invalid protocol fee");
+        require(_feeNumerator <= FEE_DENOMINATOR, "invalid protocol fee");
 
         feeNumerator = _feeNumerator;
         escrow = _escrow;
@@ -61,7 +61,7 @@ contract Bazaar is Initializable, OwnableUpgradeable, ERC1155Upgradeable, IERC29
     /// @param royalty numerator of royalty fee
     /// @param tokenURI token metadata URI
     function list(uint256 config, uint256 limit, uint256 allow, uint96 royalty, string calldata tokenURI) external returns (uint256) {
-        require(royalty <= feeDenominator, "royalty will exceed sale price");
+        require(royalty <= FEE_DENOMINATOR, "royalty will exceed sale price");
         
         Listings.Listing memory listing = Listings.Listing({
             vendor: _msgSender(),
@@ -110,7 +110,7 @@ contract Bazaar is Initializable, OwnableUpgradeable, ERC1155Upgradeable, IERC29
         _mint(to, id, 1, "");
 
         // fee goes to owner and remainder goes to vendor
-        uint256 fee = (price * feeNumerator) / feeDenominator;
+        uint256 fee = (price * feeNumerator) / FEE_DENOMINATOR;
         if (erc20 == address(0)) {
             // native token deposit
             require(msg.value == price, "incorrect amount of native tokens sent");
@@ -150,7 +150,7 @@ contract Bazaar is Initializable, OwnableUpgradeable, ERC1155Upgradeable, IERC29
     function configure(uint256 id, uint256 config, uint256 limit, uint256 allow, uint96 royalty) external onlyVendor(id) {
         Listings.Listing storage listing = _listings[id];
 
-        require(royalty <= feeDenominator, "royalty will exceed sale price");
+        require(royalty <= FEE_DENOMINATOR, "royalty will exceed sale price");
         require(limit == 0 || limit >= listing.supply, "limit lower than supply");
         require(listing.supply == 0 || listing.isUnlocked(config), "config is locked");
 
@@ -193,7 +193,7 @@ contract Bazaar is Initializable, OwnableUpgradeable, ERC1155Upgradeable, IERC29
     /// @param id unique token id
     /// @param price sale price of item
     function royaltyInfo(uint256 id, uint256 price) external view returns (address, uint256) {
-        uint256 amount = (price * _listings[id].royalty) / feeDenominator;
+        uint256 amount = (price * _listings[id].royalty) / FEE_DENOMINATOR;
         return (_listings[id].vendor, amount);
     }
 
