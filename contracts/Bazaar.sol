@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
+pragma solidity 0.8.17;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/interfaces/IERC2981Upgradeable.sol";
@@ -86,12 +86,11 @@ contract Bazaar is Initializable, OwnableUpgradeable, ERC1155Upgradeable, IERC29
 
     /// @dev Mint tokens in the given currency.
     ///
-    /// @param to recipient address
     /// @param id unique token id
-    /// @param amount quantity to mint
+    /// @param to recipient address
     /// @param erc20 currency address (zero address is native tokens)
     /// @param proof proof for allow merkle tree
-    function mint(address to, uint256 id, uint256 amount, address erc20, bytes32[] calldata proof) external payable {
+    function mint(uint256 id, address to, address erc20, bytes32[] calldata proof) external payable {
         Listings.Listing storage listing = _listings[id];
         require(!listing.isPaused(), "minting is paused");
 
@@ -102,17 +101,19 @@ contract Bazaar is Initializable, OwnableUpgradeable, ERC1155Upgradeable, IERC29
             require(listing.isAllowed(sender, proof), "not allowed");
         }
         if (listing.isFree()) {
-            return _mint(to, id, amount, "");
+            require(msg.value == 0, "mint is free");
+            return _mint(to, id, 1, "");
         }
 
-        uint256 price = _prices[id][erc20] * amount;
-        require(price > 0, "invalid currency or amount");
-        _mint(to, id, amount, "");
+        uint256 price = _prices[id][erc20];
+        require(price > 0, "invalid currency");
+        _mint(to, id, 1, "");
 
         // fee goes to owner and remainder goes to vendor
         uint256 fee = (price * feeNumerator) / FEE_DENOMINATOR;
         if (erc20 == address(0)) {
             // native token deposit
+            require(msg.value == price, "incorrect amount of native tokens sent");
             escrow.deposit{ value: price - fee }(sender, listing.vendor, erc20, price - fee);
             escrow.deposit{ value: fee }(sender, owner, erc20, fee);
         } else {
@@ -151,7 +152,8 @@ contract Bazaar is Initializable, OwnableUpgradeable, ERC1155Upgradeable, IERC29
 
         require(royalty <= FEE_DENOMINATOR, "royalty will exceed sale price");
         require(limit == 0 || limit >= listing.supply, "limit lower than supply");
-        
+        require(listing.supply == 0 || listing.isUnlocked(config), "config is locked");
+
         listing.config = config;
         listing.limit = limit;
         listing.allow = allow;
@@ -176,14 +178,6 @@ contract Bazaar is Initializable, OwnableUpgradeable, ERC1155Upgradeable, IERC29
     function transferVendor(uint256 id, address vendor) external onlyVendor(id) {
         _listings[id].vendor = vendor;
         emit TransferVendor(vendor, id);
-    }
-
-    /// @dev Withdraw deposits.
-    ///
-    /// @param payee address to send funds
-    /// @param erc20 currency address
-    function withdraw(address payable payee, address erc20) external {
-        escrow.withdraw(_msgSender(), payee, erc20);
     }
 
     /// @dev Returns the total deposits for an address.

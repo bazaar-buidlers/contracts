@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
+pragma solidity 0.8.17;
 
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
@@ -12,6 +12,8 @@ library Listings {
     uint256 constant CONFIG_SOULBOUND = 1 << 2;
     // config flag enforces one item per address
     uint256 constant CONFIG_UNIQUE = 1 << 3;
+    // config mask for flags that cannot be changed after minting
+    uint256 constant CONFIG_LOCK_MASK = CONFIG_SOULBOUND | CONFIG_UNIQUE;
     
     struct Listing {
         // vendor address
@@ -54,5 +56,10 @@ library Listings {
     function isAllowed(Listing storage listing, address sender, bytes32[] calldata proof) internal view returns (bool) {
         bytes32 leaf = keccak256(bytes.concat(keccak256(abi.encode(sender))));
         return MerkleProof.verifyCalldata(proof, bytes32(listing.allow), leaf);
+    }
+
+    /// @dev Returns true if the configuration changes do not touch any locked values.
+    function isUnlocked(Listing storage listing, uint256 config) internal view returns (bool) {
+        return (config & CONFIG_LOCK_MASK) == (listing.config & CONFIG_LOCK_MASK);
     }
 }
