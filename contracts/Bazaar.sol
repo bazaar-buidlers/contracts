@@ -150,7 +150,8 @@ contract Bazaar is Initializable, OwnableUpgradeable, ERC1155Upgradeable, IERC29
 
         require(royalty <= feeDenominator, "royalty will exceed sale price");
         require(limit == 0 || limit >= listing.supply, "limit lower than supply");
-        
+        require(listing.supply == 0 || listing.isUnlocked(config), "config is locked");
+
         listing.config = config;
         listing.limit = limit;
         listing.allow = allow;
@@ -175,14 +176,6 @@ contract Bazaar is Initializable, OwnableUpgradeable, ERC1155Upgradeable, IERC29
     function transferVendor(uint256 id, address vendor) external onlyVendor(id) {
         _listings[id].vendor = vendor;
         emit TransferVendor(vendor, id);
-    }
-
-    /// @dev Withdraw deposits.
-    ///
-    /// @param payee address to send funds
-    /// @param erc20 currency address
-    function withdraw(address payable payee, address erc20) external {
-        escrow.withdraw(_msgSender(), payee, erc20);
     }
 
     /// @dev Returns the total deposits for an address.
