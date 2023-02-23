@@ -38,10 +38,11 @@ contract Escrow is Ownable {
 
     /// @dev Withdraw funds to the given address.
     ///
-    /// @param from spender address
     /// @param to recipient address
     /// @param erc20 currency address (zero address is native tokens)
-    function withdraw(address from, address payable to, address erc20) external onlyOwner {
+    function withdraw(address payable to, address erc20) external {
+        address from = _msgSender();
+
         uint256 amount = _deposits[from][erc20];
         require(amount > 0, "nothing to withdraw");
 
@@ -60,7 +61,7 @@ contract Escrow is Ownable {
     ///
     /// @param payee address to return balance of
     /// @param erc20 currency address
-    function depositsOf(address payee, address erc20) external view onlyOwner returns (uint256) {
+    function depositsOf(address payee, address erc20) external view returns (uint256) {
         return _deposits[payee][erc20];
     }
 }
