@@ -2,11 +2,12 @@
 pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
-contract Escrow is Ownable {
+contract Escrow is Ownable, ReentrancyGuard {
     using Address for address payable;
 
     // emitted when funds are deposited
@@ -23,16 +24,23 @@ contract Escrow is Ownable {
     /// @param to recipient address
     /// @param erc20 currency address (zero address is native tokens)
     /// @param amount value to deposit
-    function deposit(address from, address to, address erc20, uint256 amount) external payable onlyOwner {
-        _deposits[to][erc20] += amount;
-        emit Deposited(to, erc20, amount);
-
+    function deposit(address from, address to, address erc20, uint256 amount) external payable onlyOwner nonReentrant {
+        address self = address(this);
+        IERC20 token = IERC20(erc20);
+        
         // zero address is native tokens
         if (erc20 == address(0)) {
             require(msg.value == amount, "value must equal amount");
-        } else {
-            SafeERC20.safeTransferFrom(IERC20(erc20), from, address(this), amount);
+        } else if (amount > 0) {
+            uint256 balance = token.balanceOf(self);
+            SafeERC20.safeTransferFrom(token, from, address(this), amount);
+            amount = token.balanceOf(self) - balance;
         }
+
+        // this does not follow checks effects interactions pattern,
+        // but function has reentrancy guard so this should be okay
+        _deposits[to][erc20] += amount;
+        emit Deposited(to, erc20, amount);
     }
 
     /// @dev Withdraw funds to the given address.
