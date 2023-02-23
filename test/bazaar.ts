@@ -56,14 +56,13 @@ describe('Bazaar.mint', function() {
     await bazaar.connect(seller).list(0, 0, 0, 0, "test");
     await bazaar.connect(seller).appraise(0, erc20s, prices);
 
-    const amount = 2;
-    const value = prices[0].mul(amount);
+    const value = prices[0];
 
-    await bazaar.connect(buyer).mint(buyer.address, 0, amount, erc20s[0], [], { value });
-    expect(await bazaar.balanceOf(buyer.address, 0)).to.equal(amount);
+    await bazaar.connect(buyer).mint(0, buyer.address, erc20s[0], [], { value });
+    expect(await bazaar.balanceOf(buyer.address, 0)).to.equal(1);
 
     const info = await bazaar.listingInfo(0);
-    expect(info.supply).to.equal(amount);
+    expect(info.supply).to.equal(1);
 
     const feeNumerator = await bazaar.feeNumerator();
     const feeDenominator = await bazaar.feeDenominator();
@@ -86,17 +85,16 @@ describe('Bazaar.mint', function() {
     await bazaar.connect(seller).list(0, 0, 0, 0, "test");
     await bazaar.connect(seller).appraise(0, erc20s, prices);
 
-    const amount = 2;
-    const value = prices[0].mul(amount);
+    const value = prices[0];
 
     await token.connect(buyer).mint(buyer.address, value);
     await token.connect(buyer).approve(escrow.address, value);
 
-    await bazaar.connect(buyer).mint(buyer.address, 0, amount, erc20s[0], [], { value });
-    expect(await bazaar.balanceOf(buyer.address, 0)).to.equal(amount);
+    await bazaar.connect(buyer).mint(0, buyer.address, erc20s[0], []);
+    expect(await bazaar.balanceOf(buyer.address, 0)).to.equal(1);
 
     const info = await bazaar.listingInfo(0);
-    expect(info.supply).to.equal(amount);
+    expect(info.supply).to.equal(1);
 
     const feeNumerator = await bazaar.feeNumerator();
     const feeDenominator = await bazaar.feeDenominator();
@@ -114,7 +112,7 @@ describe('Bazaar.mint', function() {
     const [_, seller, buyer] = await ethers.getSigners();
     
     await bazaar.connect(seller).list(CONFIG_FREE, 0, 0, 0, "test");
-    await bazaar.connect(buyer).mint(buyer.address, 0, 1, constants.AddressZero, []);
+    await bazaar.connect(buyer).mint(0, buyer.address, constants.AddressZero, []);
     expect(await bazaar.balanceOf(buyer.address, 0)).to.equal(1);
   });
 
@@ -127,7 +125,7 @@ describe('Bazaar.mint', function() {
     const proof = tree.getProof([buyer.address]);
     
     await bazaar.connect(seller).list(CONFIG_FREE, 0, tree.root, 0, "test");
-    await bazaar.connect(buyer).mint(buyer.address, 0, 1, constants.AddressZero, proof);
+    await bazaar.connect(buyer).mint(0, buyer.address, constants.AddressZero, proof);
     expect(await bazaar.balanceOf(buyer.address, 0)).to.equal(1);
   });
 
@@ -141,7 +139,7 @@ describe('Bazaar.mint', function() {
     
     await bazaar.connect(seller).list(CONFIG_FREE, 0, tree.root, 0, "test");
 
-    const tx = bazaar.connect(buyer).mint(buyer.address, 0, 1, constants.AddressZero, proof);
+    const tx = bazaar.connect(buyer).mint(0, buyer.address, constants.AddressZero, proof);
     await expect(tx).to.be.revertedWith('not allowed');
   });
 
@@ -151,7 +149,7 @@ describe('Bazaar.mint', function() {
     
     await bazaar.connect(seller).list(CONFIG_PAUSED, 0, 0, 0, "test");
 
-    const tx = bazaar.connect(buyer).mint(buyer.address, 0, 1, constants.AddressZero, []);
+    const tx = bazaar.connect(buyer).mint(0, buyer.address, constants.AddressZero, []);
     await expect(tx).to.be.revertedWith('minting is paused');
   });
 
@@ -161,8 +159,8 @@ describe('Bazaar.mint', function() {
     
     await bazaar.connect(seller).list(0, 0, 0, 0, "test");
 
-    const tx = bazaar.connect(buyer).mint(buyer.address, 0, 1, constants.AddressZero, []);
-    await expect(tx).to.be.revertedWith('invalid currency or amount');
+    const tx = bazaar.connect(buyer).mint(0, buyer.address, constants.AddressZero, []);
+    await expect(tx).to.be.revertedWith('invalid currency');
   });
 
   it('should revert when limit is reached', async function() {
@@ -175,7 +173,11 @@ describe('Bazaar.mint', function() {
     await bazaar.connect(seller).list(0, 1, 0, 0, "test");
     await bazaar.connect(seller).appraise(0, erc20s, prices);
 
-    const tx = bazaar.connect(buyer).mint(buyer.address, 0, 2, erc20s[0], [], { value: prices[0].mul(2) });
+    const value = prices[0];
+    await bazaar.connect(buyer).mint(0, buyer.address, erc20s[0], [], { value });
+    expect(await bazaar.balanceOf(buyer.address, 0)).to.equal(1);
+
+    const tx = bazaar.connect(buyer).mint(0, buyer.address, erc20s[0], [], { value });
     await expect(tx).to.be.revertedWith('token limit reached');
   });
 
@@ -189,10 +191,11 @@ describe('Bazaar.mint', function() {
     await bazaar.connect(seller).list(CONFIG_UNIQUE, 1, 0, 0, "test");
     await bazaar.connect(seller).appraise(0, erc20s, prices);
 
-    await bazaar.mint(buyer.address, 0, 1, erc20s[0], [], { value: prices[0] });
+    const value = prices[0];
+    await bazaar.mint(0, buyer.address, erc20s[0], [], { value });
     expect(await bazaar.balanceOf(buyer.address, 0)).to.equal(1);
 
-    const tx = bazaar.connect(buyer).mint(buyer.address, 0, 1, erc20s[0], [], { value: prices[0] });
+    const tx = bazaar.connect(buyer).mint(0, buyer.address, erc20s[0], [], { value });
     await expect(tx).to.be.revertedWith('token is unique');
   });
 });
@@ -249,7 +252,6 @@ describe('Bazaar.configure', function() {
     expect(info.limit).to.equal(2);
     expect(info.allow).to.equal(3);
     expect(info.royalty).to.equal(4);
-
   });
 
   it('should revert when sender is not vendor', async function() {
@@ -267,7 +269,8 @@ describe('Bazaar.configure', function() {
     const [_, seller, buyer] = await ethers.getSigners();
 
     await bazaar.connect(seller).list(CONFIG_FREE, 0, 0, 0, "test");
-    await bazaar.connect(buyer).mint(buyer.address, 0, 2, constants.AddressZero, []);
+    await bazaar.connect(buyer).mint(0, buyer.address, constants.AddressZero, []);
+    await bazaar.connect(buyer).mint(0, buyer.address, constants.AddressZero, []);
 
     const tx = bazaar.connect(seller).configure(0, CONFIG_FREE, 1, 0, 0);
     expect(tx).to.be.revertedWith('limit lower than supply');
@@ -291,7 +294,7 @@ describe('Bazaar.configure', function() {
     const [_, seller, buyer] = await ethers.getSigners();
 
     await bazaar.connect(seller).list(CONFIG_FREE | CONFIG_SOULBOUND, 0, 0, 0, "test");
-    await bazaar.connect(buyer).mint(buyer.address, 0, 1, constants.AddressZero, []);
+    await bazaar.connect(buyer).mint(0, buyer.address, constants.AddressZero, []);
 
     // attempt to disable soulbound
     const tx1 = bazaar.connect(seller).configure(0, CONFIG_FREE, 0, 0, 0);
