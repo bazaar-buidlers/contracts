@@ -24,8 +24,6 @@ contract Escrow is Ownable {
     /// @param erc20 currency address (zero address is native tokens)
     /// @param amount value to deposit
     function deposit(address from, address to, address erc20, uint256 amount) external payable onlyOwner {
-        require(amount > 0, "nothing to deposit");
-
         _deposits[to][erc20] += amount;
         emit Deposited(to, erc20, amount);
 
