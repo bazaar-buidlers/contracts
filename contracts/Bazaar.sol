@@ -91,15 +91,13 @@ contract Bazaar is Initializable, OwnableUpgradeable, ERC1155Upgradeable, IERC29
     /// @param erc20 currency address (zero address is native tokens)
     /// @param proof proof for allow merkle tree
     function mint(uint256 id, address to, address erc20, bytes32[] calldata proof) external payable {
-        Listings.Listing storage listing = _listings[id];
-        require(!listing.isPaused(), "minting is paused");
-
         address _owner = owner();
         address sender = _msgSender();
+        
+        Listings.Listing storage listing = _listings[id];
+        require(!listing.isPaused(), "minting is paused");
+        require(listing.allow == 0 || listing.isAllowed(sender, proof), "not allowed");
 
-        if (listing.allow != 0) {
-            require(listing.isAllowed(sender, proof), "not allowed");
-        }
         if (listing.isFree()) {
             require(msg.value == 0, "mint is free");
             return _mint(to, id, 1, "");

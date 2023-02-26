@@ -1,20 +1,20 @@
 {
   "manifestVersion": "3.2",
   "admin": {
-    "address": "0xa8F7CF7a177EBfcd17C9a1E6b38297756cC4fd9A",
-    "txHash": "0xe2fa3d01c84edcd44585029ccb8a9c4a28f5c40d931f76019da677b059ce6185"
+    "address": "0x8DD97dd4d811e53E5A00725d07B8b521C89f504F",
+    "txHash": "0x6b70474ff3abac56b0be8e178aa0497890f8382fab2622440e195d2be8a8058a"
   },
   "proxies": [
     {
-      "address": "0xff2DfB52C63417CD1f5bAB91b2eFa8Cd50537A81",
-      "txHash": "0x0816028165b94925fd1b77d8c39987da1099fd554badb31b5b7c6fce1361412c",
+      "address": "0x4e67A42C43FEAe4AD066e0bdf373ae9076263d97",
+      "txHash": "0x33e3053e6e267533e0c8a7a0523ced2f8f8470f9049c22203e3e42d253724588",
       "kind": "transparent"
     }
   ],
   "impls": {
-    "86d70a654dab4ce1bb15bf058add2da458e73d186f2eb4681a413641515f6016": {
-      "address": "0x328119024D178C13468fb3Bb5CeCe3F65705172f",
-      "txHash": "0x3a7e6ba74c992f790d3508f9de0b2ac0387bb689b628470b103e6363e2a4040e",
+    "1769fceec70c316fa54a940b11cbcf30c7fdf0fb4ea383ace31bdf50744ed7e3": {
+      "address": "0xB970AeD3DA0EDC7E6A7D12cbA51A29AE572fC1FB",
+      "txHash": "0x63e5fa06b97730807e488b81500048b845050e8aa6a55df2b80475903230e8ec",
       "layout": {
         "solcVersion": "0.8.17",
         "storage": [
@@ -103,7 +103,7 @@
             "label": "escrow",
             "offset": 0,
             "slot": "201",
-            "type": "t_contract(Escrow)4177",
+            "type": "t_contract(Escrow)4582",
             "contract": "Bazaar",
             "src": "contracts/Bazaar.sol:24"
           },
@@ -127,7 +127,7 @@
             "label": "_listings",
             "offset": 0,
             "slot": "203",
-            "type": "t_mapping(t_uint256,t_struct(Listing)4215_storage)",
+            "type": "t_mapping(t_uint256,t_struct(Listing)4625_storage)",
             "contract": "Bazaar",
             "src": "contracts/Bazaar.sol:33"
           },
@@ -161,7 +161,7 @@
             "label": "bool",
             "numberOfBytes": "1"
           },
-          "t_contract(Escrow)4177": {
+          "t_contract(Escrow)4582": {
             "label": "contract Escrow",
             "numberOfBytes": "20"
           },
@@ -181,7 +181,7 @@
             "label": "mapping(uint256 => mapping(address => uint256))",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_uint256,t_struct(Listing)4215_storage)": {
+          "t_mapping(t_uint256,t_struct(Listing)4625_storage)": {
             "label": "mapping(uint256 => struct Listings.Listing)",
             "numberOfBytes": "32"
           },
@@ -189,53 +189,53 @@
             "label": "string",
             "numberOfBytes": "32"
           },
-          "t_struct(Listing)4215_storage": {
+          "t_struct(Listing)4625_storage": {
             "label": "struct Listings.Listing",
             "members": [
-              {
-                "label": "vendor",
-                "type": "t_address",
-                "offset": 0,
-                "slot": "0"
-              },
               {
                 "label": "config",
                 "type": "t_uint256",
                 "offset": 0,
-                "slot": "1"
+                "slot": "0"
               },
               {
                 "label": "supply",
                 "type": "t_uint256",
                 "offset": 0,
-                "slot": "2"
+                "slot": "1"
               },
               {
                 "label": "limit",
                 "type": "t_uint256",
                 "offset": 0,
-                "slot": "3"
+                "slot": "2"
               },
               {
                 "label": "allow",
                 "type": "t_uint256",
+                "offset": 0,
+                "slot": "3"
+              },
+              {
+                "label": "vendor",
+                "type": "t_address",
                 "offset": 0,
                 "slot": "4"
               },
               {
                 "label": "royalty",
                 "type": "t_uint96",
-                "offset": 0,
-                "slot": "5"
+                "offset": 20,
+                "slot": "4"
               },
               {
                 "label": "uri",
                 "type": "t_string_storage",
                 "offset": 0,
-                "slot": "6"
+                "slot": "5"
               }
             ],
-            "numberOfBytes": "224"
+            "numberOfBytes": "192"
           },
           "t_uint256": {
             "label": "uint256",
