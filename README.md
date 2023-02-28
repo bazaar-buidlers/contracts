@@ -25,3 +25,8 @@ hardhat run ./scripts/deploy.ts --network arbitrum-goerli
 ```
 pnpm exec hardhat verify CONTRACT_ADDRESS --network arbitrum-goerli
 ```
+
+## Audit
+
+Audit completed February 2023 by [Bernd Artmüller](https://github.com/berndartmueller) ([@berndartmueller](https://twitter.com/berndartmueller)).
+Original audit report available [here](https://github.com/berndartmueller/audits/blob/main/audits/Bazaar/2023-02_Bazaar_Audit_Report.md).
