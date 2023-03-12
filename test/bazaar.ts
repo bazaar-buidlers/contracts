@@ -352,3 +352,25 @@ describe('Bazaar.transferVendor', function() {
     await expect(tx).to.be.revertedWith('sender is not vendor');
   });
 });
+
+describe('Bazaar.review', function() {
+  it('should emit Review', async function name() {
+    const { bazaar } = await loadFixture(deployBazaar);
+    const [_, seller, buyer] = await ethers.getSigners();
+
+    await bazaar.connect(seller).list(0, 0, 0, 0, "test");
+
+    const tx = bazaar.connect(buyer).review(0, 55, "good");
+    await expect(tx).to.emit(bazaar, 'Review');
+  });
+
+  it('should revert when rating is greater than 100', async function() {
+    const { bazaar } = await loadFixture(deployBazaar);
+    const [_, seller, buyer] = await ethers.getSigners();
+
+    await bazaar.connect(seller).list(0, 0, 0, 0, "test");
+
+    const tx = bazaar.connect(buyer).review(0, 101, "good");
+    await expect(tx).to.be.revertedWith('invalid rating');
+  });
+});

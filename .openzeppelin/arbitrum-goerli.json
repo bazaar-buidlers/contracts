@@ -1,20 +1,20 @@
 {
   "manifestVersion": "3.2",
   "admin": {
-    "address": "0x8DD97dd4d811e53E5A00725d07B8b521C89f504F",
-    "txHash": "0x6b70474ff3abac56b0be8e178aa0497890f8382fab2622440e195d2be8a8058a"
+    "address": "0x6AC66635F013C212072ace533429a4C879F43fE6",
+    "txHash": "0xee21172e21ffab9b9e5e89b01d22da66ff1106c81fb3c240ed66e1a111040b02"
   },
   "proxies": [
     {
-      "address": "0x4e67A42C43FEAe4AD066e0bdf373ae9076263d97",
-      "txHash": "0x33e3053e6e267533e0c8a7a0523ced2f8f8470f9049c22203e3e42d253724588",
+      "address": "0x4B36Ab67E5Ac6d82a2AAd29071aB6B1b0E61592D",
+      "txHash": "0x0d0eb63ec2f8a44ca6b00c036ae4008e2b3be4801397ebf6c95f33d325830d35",
       "kind": "transparent"
     }
   ],
   "impls": {
-    "1769fceec70c316fa54a940b11cbcf30c7fdf0fb4ea383ace31bdf50744ed7e3": {
-      "address": "0xB970AeD3DA0EDC7E6A7D12cbA51A29AE572fC1FB",
-      "txHash": "0x63e5fa06b97730807e488b81500048b845050e8aa6a55df2b80475903230e8ec",
+    "9e7c9be020acf6f7f43e5dac871d269f7c18e0d722f935c0383a66a1ffdb8d42": {
+      "address": "0x44B32d50EC3a5fbEC9C2ea6a2dE8a75071f68C7c",
+      "txHash": "0x3e36bc16b8fda0790e4161040a5f9b98525562212ab28fff137927dd9775a7fe",
       "layout": {
         "solcVersion": "0.8.17",
         "storage": [
@@ -103,9 +103,9 @@
             "label": "escrow",
             "offset": 0,
             "slot": "201",
-            "type": "t_contract(Escrow)4582",
+            "type": "t_contract(Escrow)4618",
             "contract": "Bazaar",
-            "src": "contracts/Bazaar.sol:24"
+            "src": "contracts/Bazaar.sol:26"
           },
           {
             "label": "feeNumerator",
@@ -113,7 +113,7 @@
             "slot": "201",
             "type": "t_uint96",
             "contract": "Bazaar",
-            "src": "contracts/Bazaar.sol:26"
+            "src": "contracts/Bazaar.sol:28"
           },
           {
             "label": "_counter",
@@ -121,15 +121,15 @@
             "slot": "202",
             "type": "t_uint256",
             "contract": "Bazaar",
-            "src": "contracts/Bazaar.sol:31"
+            "src": "contracts/Bazaar.sol:33"
           },
           {
             "label": "_listings",
             "offset": 0,
             "slot": "203",
-            "type": "t_mapping(t_uint256,t_struct(Listing)4625_storage)",
+            "type": "t_mapping(t_uint256,t_struct(Listing)4661_storage)",
             "contract": "Bazaar",
-            "src": "contracts/Bazaar.sol:33"
+            "src": "contracts/Bazaar.sol:35"
           },
           {
             "label": "_prices",
@@ -137,7 +137,7 @@
             "slot": "204",
             "type": "t_mapping(t_uint256,t_mapping(t_address,t_uint256))",
             "contract": "Bazaar",
-            "src": "contracts/Bazaar.sol:35"
+            "src": "contracts/Bazaar.sol:37"
           }
         ],
         "types": {
@@ -161,7 +161,7 @@
             "label": "bool",
             "numberOfBytes": "1"
           },
-          "t_contract(Escrow)4582": {
+          "t_contract(Escrow)4618": {
             "label": "contract Escrow",
             "numberOfBytes": "20"
           },
@@ -181,7 +181,7 @@
             "label": "mapping(uint256 => mapping(address => uint256))",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_uint256,t_struct(Listing)4625_storage)": {
+          "t_mapping(t_uint256,t_struct(Listing)4661_storage)": {
             "label": "mapping(uint256 => struct Listings.Listing)",
             "numberOfBytes": "32"
           },
@@ -189,7 +189,7 @@
             "label": "string",
             "numberOfBytes": "32"
           },
-          "t_struct(Listing)4625_storage": {
+          "t_struct(Listing)4661_storage": {
             "label": "struct Listings.Listing",
             "members": [
               {
