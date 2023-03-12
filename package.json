@@ -7,7 +7,6 @@
     "compile": "hardhat compile",
     "coverage": "hardhat coverage",
     "deploy": "hardhat run ./scripts/deploy.ts --network localhost",
-    "deploy:arbitrum-goerli": "hardhat run ./scripts/deploy.ts --network arbitrum-goerli",
     "node": "hardhat node",
     "test": "hardhat test"
   },

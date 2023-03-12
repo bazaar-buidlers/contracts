@@ -4,8 +4,8 @@
 
 ### Arbitrum Goerli
 
-- Bazaar `0x4e67A42C43FEAe4AD066e0bdf373ae9076263d97`
-- Escrow `0x0cA79643715dBfC9e0D094a4D18Ad618189F1C58`
+- Bazaar `0x4B36Ab67E5Ac6d82a2AAd29071aB6B1b0E61592D`
+- Escrow `0x30Aa3aaCD9F2336052cC4ec44DC79ba06299b0bB`
 
 ## Development
 
@@ -19,7 +19,7 @@ pnpm run compile
 ### Deploy
 
 ```
-hardhat run ./scripts/deploy.ts --network arbitrum-goerli
+pnpm exec hardhat run ./scripts/deploy.ts --network arbitrum-goerli
 ```
 
 ### Verify

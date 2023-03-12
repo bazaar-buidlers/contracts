@@ -19,6 +19,8 @@ contract Bazaar is Initializable, OwnableUpgradeable, ERC1155Upgradeable, IERC29
     event Configure(uint256 config, uint256 limit, uint256 allow, uint96 royalty, uint256 indexed id);
     // emitted when item price is changed
     event Appraise(uint256 price, address erc20, uint256 indexed id);
+    // emitted when an item is reviewed
+    event Review(uint256 rating, string uri, address indexed sender, uint256 indexed id);
 
     // escrow contract
     Escrow public escrow;
@@ -167,6 +169,16 @@ contract Bazaar is Initializable, OwnableUpgradeable, ERC1155Upgradeable, IERC29
     function update(uint256 id, string calldata tokenURI) external onlyVendor(id) {
         _listings[id].uri = tokenURI;
         emit URI(tokenURI, id);
+    }
+
+    /// @dev Review an item.
+    ///
+    /// @param id unique token id
+    /// @param rating value between 0 and 100
+    /// @param reviewURI uri of review metadata
+    function review(uint256 id, uint256 rating, string calldata reviewURI) external {
+        require(rating <= 100, "invalid rating");
+        emit Review(rating, reviewURI, _msgSender(), id);
     }
 
     /// @dev Transfer a listing to a new vendor.
