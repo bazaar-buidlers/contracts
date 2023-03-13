@@ -177,7 +177,11 @@ contract Bazaar is Initializable, OwnableUpgradeable, ERC1155Upgradeable, IERC29
     /// @param rating value between 0 and 100
     /// @param reviewURI uri of review metadata
     function review(uint256 id, uint256 rating, string calldata reviewURI) external {
+        uint256 balance = balanceOf(_msgSender(), id);
+        
+        require(balance > 0, "item not owned");
         require(rating <= 100, "invalid rating");
+
         emit Review(rating, reviewURI, _msgSender(), id);
     }
 
