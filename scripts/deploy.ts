@@ -16,8 +16,8 @@ async function main() {
   await escrow.transferOwnership(bazaar.address);
   console.log(`Escrow owner transferred to ${bazaar.address}`);
 
-  // await bazaar.transferOwnership();
-  // await upgrades.admin.transferProxyAdminOwnership();
+  // await bazaar.transferOwnership('');
+  // await upgrades.admin.transferProxyAdminOwnership('');
 }
 
 // We recommend this pattern to be able to use async/await everywhere

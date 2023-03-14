@@ -41,7 +41,7 @@ const config: HardhatUserConfig = {
     },
   },
   networks: {
-    'arbitrum': networkConfig('arbitrum'),
+    'arbitrum': networkConfig('arb-mainnet'),
     'arbitrum-goerli': networkConfig('arb-goerli'),
   },
 };

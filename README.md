@@ -2,6 +2,11 @@
 
 ## Addresses
 
+### Arbitrum One
+
+- Bazaar `0x76d8b9e38D9BAa56aB62fd832ECf0eEd79d7e7E9`
+- Escrow `0xd6c042Fd42e5dC900BE869F5df2e1a21C3C48214`
+
 ### Arbitrum Goerli
 
 - Bazaar `0x4B36Ab67E5Ac6d82a2AAd29071aB6B1b0E61592D`
@@ -17,13 +22,13 @@ pnpm run compile
 ## Deploy
 
 ```
-pnpm exec hardhat run ./scripts/deploy.ts --network arbitrum-goerli
+pnpm exec hardhat run ./scripts/deploy.ts --network arbitrum
 ```
 
 ## Verify
 
 ```
-pnpm exec hardhat verify CONTRACT_ADDRESS --network arbitrum-goerli
+pnpm exec hardhat verify CONTRACT_ADDRESS --network arbitrum
 ```
 
 ## Audit
